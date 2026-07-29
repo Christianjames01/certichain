@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/certificates.php'; 
 
 $isLoggedIn = !empty($_SESSION['user_id']);
 $role       = $_SESSION['role'] ?? null;
@@ -14,6 +15,34 @@ $dashboardByRole = [
     'registrar_head' => 'registrar_head/assign_employee.php',
 ];
 $dashboardUrl = $dashboardByRole[$role] ?? 'index.php';
+
+$spotlightCerts = [
+    [
+        'title'   => 'Certificate of Enrollment (COE)',
+        'sub'     => "Official proof that a student is currently enrolled at Holy Cross of Davao College. Commonly required for scholarship applications, bank requirements, visa processing, and government transactions.",
+        'videoId' => 'QnlHfEGHNMA',
+    ],
+    [
+        'title'   => 'Certificate of Registration (COR)',
+        'sub'     => 'Official proof of your registered subjects and units for the term — often requested for allowance, subsidy, or scholarship applications.',
+        'videoId' => 'QnlHfEGHNMA',
+    ],
+    [
+        'title'   => 'Certification of Grades',
+        'sub'     => "Provides an officially certified copy of the student's grades for a specific semester or academic year.",
+        'videoId' => '_rS2uEvG0ik',
+    ],
+    [
+        'title'   => 'Certificate of Graduation',
+        'sub'     => 'Official confirmation that a student has graduated from their program — commonly required for employment and further studies.',
+        'videoId' => 'YA9IOYDH0xY',
+    ],
+    [
+        'title'   => 'Certificate of Active Student Status',
+        'sub'     => 'Confirms you are an active, currently enrolled student in good academic standing, based on records maintained by the Registrar.',
+        'videoId' => '_rS2uEvG0ik',
+    ],
+];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -47,17 +76,17 @@ $dashboardUrl = $dashboardByRole[$role] ?? 'index.php';
                 <img class="crest" src="public/assets/logo/hcdc-logo.jpg" alt="Holy Cross of Davao College logo">
                 <div class="brand-text">
                     <div class="school">Holy Cross of Davao College</div>
-                    <div class="office">The Office of Registration and Records Management &middot; CertiChain AI</div>
+                    <div class="office">The Office of Registration and Records Management &middot; CertiChain</div>
                 </div>
             </div>
             <nav class="primary">
-                <a href="#services">Registrar Services</a>
-                <a href="#verify">Credential Verification</a>
-                <a href="#academics">Academic References</a>
-                <a href="#news">Announcements</a>
-                <a href="#about">About</a>
+                <a href="index.php">Home</a>
+                <a href="certservices.php">Registrar Services</a>
+                <a href="index.php#verify">How to Request</a>
+                <a href="index.php#news">Announcements</a>
+                <a href="about.php">About</a>
             </nav>
-            <div class="header-cta">
+            <div class="header-cta">    
                 <?php if ($isLoggedIn): ?>
                     <span style="font-size:13.5px;color:var(--hcdc-ink-soft);margin-right:4px;">
                         Hi, <?= htmlspecialchars($firstName) ?>
@@ -78,27 +107,27 @@ $dashboardUrl = $dashboardByRole[$role] ?? 'index.php';
         <div class="wrap">
             <div>
                 <div class="eyebrow"><span class="dot"></span>Blaze your trail, securely verified</div>
-                <h1 class="hero-title">Registrar services, <em>fully online</em>. Credentials, blockchain-verified.</h1>
-                <p class="lede">CertiChain AI lets HCDC students apply for graduation, request transcripts and diplomas,
-                    settle clearance, and pay online — while every credential we issue is sealed on the blockchain and
-                    instantly verifiable by employers and partner institutions.</p>
+<h1 class="hero-title">Academic Certifications, <em>available online</em>. Securely verified with CertiChain.</h1>
+<p class="lede">CertiChain enables HCDC students and alumni to request official academic certifications online.
+    Every issued certification is securely processed and verified by the Registrar's Office, ensuring accuracy
+    and authenticity from request to release.</p>
                 <div class="hero-actions">
                     <?php if ($isLoggedIn): ?>
                         <a href="<?= htmlspecialchars($dashboardUrl) ?>" class="btn btn-gold"><i class="ti ti-file-certificate"></i>Go to your dashboard</a>
                     <?php else: ?>
-                        <a href="auth/register.php" class="btn btn-gold"><i class="ti ti-file-certificate"></i>Start a registrar request</a>
+                       <a href="auth/register.php" class="btn btn-gold"><i class="ti ti-file-certificate"></i>Request a Certification</a>
                     <?php endif; ?>
-                    <a href="#verify" class="btn btn-ghost"><i class="ti ti-shield-check"></i>Verify a document</a>
+                    <a href="#verify" class="btn btn-ghost"><i class="ti ti-shield-check"></i>Verify a Certificate</a>
                 </div>
                 <div class="hero-quicklinks">
-                    <a href="#services">Graduation application</a>
-                    <a href="#services">Transcript request</a>
-                    <a href="#services">Diploma request</a>
-                    <a href="#services">Online clearance</a>
-                </div>
+    <a href="certservices.php?cert=<?= certSlug('Certificate of Enrollment (COE)') ?>">Certificate of Enrollment</a>
+    <a href="certservices.php?cert=<?= certSlug('Certification of Grades') ?>">Certification of Grades</a>
+    <a href="certservices.php?cert=<?= certSlug('Certificate of Active Student Status') ?>">Certificate of Academic Standing</a>
+    <a href="certservices.php?cert=<?= certSlug('Certificate of Graduation') ?>">Certificate of Graduation</a>
+</div>
             </div>
             <div class="seal-card">
-                <div class="verify-pill"><i class="ti ti-camera"></i>Registrar spotlight</div>
+                <div class="verify-pill"><i class="ti ti-camera"></i>Certification Spotlight</div>
                 <div class="spotlight-media">
                     <div id="spotlight-player"></div>
                     <div class="next-up-overlay" id="next-up-overlay">
@@ -114,12 +143,13 @@ $dashboardUrl = $dashboardByRole[$role] ?? 'index.php';
                     </div>
                 </div>
                 <div class="spotlight-body">
-                    <div class="label">What's happening at the registrar</div>
-                    <p class="spotlight-title" id="spotlight-title">How to request your Transcript of Records</p>
-                    <p class="spotlight-sub" id="spotlight-sub">A quick walkthrough of the counter, the queue, and what
-                        to
-                        bring for your request &mdash; posted by the registrar's office.</p>
-                </div>
+    <div class="label">Featured Academic Certifications</div>
+    <p class="spotlight-title" id="spotlight-title"><?= htmlspecialchars($spotlightCerts[0]['title']) ?></p>
+    <p class="spotlight-sub" id="spotlight-sub"><?= htmlspecialchars($spotlightCerts[0]['sub']) ?></p>
+    <a href="certservices.php?cert=<?= certSlug($spotlightCerts[0]['title']) ?>" id="spotlight-request-btn" class="btn btn-gold" style="margin-top:12px;">
+        <i class="ti ti-file-certificate"></i>Request this Certificate
+    </a>
+</div>
                 <div class="spotlight-dots" id="spotlight-dots"></div>
             </div>
         </div>
@@ -141,18 +171,18 @@ $dashboardUrl = $dashboardByRole[$role] ?? 'index.php';
                     <div class="category-head">
                         <div class="category-icon">
                             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 9L12 5 2 9l10 4 10-4z" /><path d="M6 10.5V16c0 1.5 2.7 3 6 3s6-1.5 6-3v-5.5" /><path d="M22 9v6" /></svg>
-                        </div>
+                        </div>  
                         <h3>Enrollment &amp; student status</h3>
                     </div>
                     <ul class="cert-list">
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certificate of Enrollment (COE)</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certificate of Registration (COR)</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certificate of Student Status</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certificate of Current Enrollment</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certificate of Attendance</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certificate of Academic Load</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certificate of Residency</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certificate of Active Student Status</a></li>
+                      <li><a href="certservices.php?cert=<?= certSlug('Certificate of Enrollment (COE)') ?>">Certificate of Enrollment (COE)</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certificate of Registration (COR)') ?>">Certificate of Registration (COR)</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certificate of Student Status') ?>">Certificate of Student Status</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certificate of Current Enrollment') ?>">Certificate of Current Enrollment</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certificate of Attendance') ?>">Certificate of Attendance</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certificate of Academic Load') ?>">Certificate of Academic Load</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certificate of Residency') ?>">Certificate of Residency</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certificate of Active Student Status') ?>">Certificate of Active Student Status</a></li>
                     </ul>
                 </div>
 
@@ -164,17 +194,17 @@ $dashboardUrl = $dashboardByRole[$role] ?? 'index.php';
                         <h3>Academic records</h3>
                     </div>
                     <ul class="cert-list">
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Official Transcript of Records (TOR)</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certified True Copy of Transcript of Records</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Transcript of Records for Employment Purposes</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Transcript of Records for Board Examination Purposes</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Transcript of Records for Foreign Evaluation</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certification of Grades</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certification of General Weighted Average (GWA)</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certification of Academic Records</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certification of Units Earned</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certification of Subjects Taken</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certification of Completion of Academic Requirements</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Official Transcript of Records (TOR)') ?>">Official Transcript of Records (TOR)</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certified True Copy of Transcript of Records') ?>">Certified True Copy of Transcript of Records</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Transcript of Records for Employment Purposes') ?>">Transcript of Records for Employment Purposes</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Transcript of Records for Board Examination Purposes') ?>">Transcript of Records for Board Examination Purposes</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Transcript of Records for Foreign Evaluation') ?>">Transcript of Records for Foreign Evaluation</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certification of Grades') ?>">Certification of Grades</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certification of General Weighted Average (GWA)') ?>">Certification of General Weighted Average (GWA)</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certification of Academic Records') ?>">Certification of Academic Records</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certification of Units Earned') ?>">Certification of Units Earned</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certification of Subjects Taken') ?>">Certification of Subjects Taken</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certification of Completion of Academic Requirements') ?>">Certification of Completion of Academic Requirements</a></li>
                     </ul>
                 </div>
 
@@ -186,12 +216,12 @@ $dashboardUrl = $dashboardByRole[$role] ?? 'index.php';
                         <h3>Graduation</h3>
                     </div>
                     <ul class="cert-list">
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certificate of Graduation</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certificate of Graduation Completion</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certificate of Candidacy for Graduation</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certificate of Degree Completion</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certificate of Academic Completion</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certificate of Honors / Awards</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certificate of Graduation') ?>">Certificate of Graduation</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certificate of Graduation Completion') ?>">Certificate of Graduation Completion</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certificate of Candidacy for Graduation') ?>">Certificate of Candidacy for Graduation</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certificate of Degree Completion') ?>">Certificate of Degree Completion</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certificate of Academic Completion') ?>">Certificate of Academic Completion</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certificate of Honors / Awards') ?>">Certificate of Honors / Awards</a></li>
                     </ul>
                 </div>
 
@@ -203,10 +233,10 @@ $dashboardUrl = $dashboardByRole[$role] ?? 'index.php';
                         <h3>Diploma</h3>
                     </div>
                     <ul class="cert-list">
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Original Diploma</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certified True Copy of Diploma</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Replacement / Duplicate Diploma</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Diploma Authentication Certificate</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Original Diploma') ?>">Original Diploma</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certified True Copy of Diploma') ?>">Certified True Copy of Diploma</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Replacement / Duplicate Diploma') ?>">Replacement / Duplicate Diploma</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Diploma Authentication Certificate') ?>">Diploma Authentication Certificate</a></li>
                     </ul>
                 </div>
 
@@ -218,12 +248,12 @@ $dashboardUrl = $dashboardByRole[$role] ?? 'index.php';
                         <h3>Transfer &amp; withdrawal</h3>
                     </div>
                     <ul class="cert-list">
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certificate of Transfer Credential</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certificate of Honorable Dismissal</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Transfer Credential</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certificate of Withdrawal</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certificate of No Objection for Transfer</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certificate of No Record</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certificate of Transfer Credential') ?>">Certificate of Transfer Credential</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certificate of Honorable Dismissal') ?>">Certificate of Honorable Dismissal</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Transfer Credential') ?>">Transfer Credential</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certificate of Withdrawal') ?>">Certificate of Withdrawal</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certificate of No Objection for Transfer') ?>">Certificate of No Objection for Transfer</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certificate of No Record') ?>">Certificate of No Record</a></li>
                     </ul>
                 </div>
 
@@ -235,11 +265,11 @@ $dashboardUrl = $dashboardByRole[$role] ?? 'index.php';
                         <h3>Authentication &amp; verification</h3>
                     </div>
                     <ul class="cert-list">
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certification, Authentication &amp; Verification (CAV)</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Academic Credential Verification Certificate</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">School Record Verification Certificate</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Document Authentication Certificate</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certificate of Authenticity of Academic Records</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certification, Authentication &amp; Verification (CAV)') ?>">Certification, Authentication &amp; Verification (CAV)</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Academic Credential Verification Certificate') ?>">Academic Credential Verification Certificate</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('School Record Verification Certificate') ?>">School Record Verification Certificate</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Document Authentication Certificate') ?>">Document Authentication Certificate</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certificate of Authenticity of Academic Records') ?>">Certificate of Authenticity of Academic Records</a></li>
                         <li><a href="#verify">Verify an issued credential online →</a></li>
                     </ul>
                 </div>
@@ -252,12 +282,12 @@ $dashboardUrl = $dashboardByRole[$role] ?? 'index.php';
                         <h3>Curriculum &amp; course</h3>
                     </div>
                     <ul class="cert-list">
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certificate of Curriculum</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Course Description Certificate</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certification of Course Syllabus</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certification of Subjects &amp; Units</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certification of Medium of Instruction</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certification of Program Completion</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certificate of Curriculum') ?>">Certificate of Curriculum</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Course Description Certificate') ?>">Course Description Certificate</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certification of Course Syllabus') ?>">Certification of Course Syllabus</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certification of Subjects & Units') ?>">Certification of Subjects &amp; Units</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certification of Medium of Instruction') ?>">Certification of Medium of Instruction</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certification of Program Completion') ?>">Certification of Program Completion</a></li>
                     </ul>
                 </div>
 
@@ -268,15 +298,15 @@ $dashboardUrl = $dashboardByRole[$role] ?? 'index.php';
                         </div>
                         <h3>Special purpose</h3>
                     </div>
-                    <ul class="cert-list">
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certificate for Employment Requirement</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certificate for Scholarship Requirement</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certificate for Internship/OJT Requirement</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certificate for Visa Requirement</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certificate for Embassy Requirement</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certificate for Graduate School Admission</a></li>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'certservices.php' ?>">Certificate for Professional Examination Requirement</a></li>
-                    </ul>
+                   <ul class="cert-list">
+                        <li><a href="certservices.php?cert=<?= certSlug('Certificate for Employment Requirement') ?>">Certificate for Employment Requirement</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certificate for Scholarship Requirement') ?>">Certificate for Scholarship Requirement</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certificate for Internship/OJT Requirement') ?>">Certificate for Internship/OJT Requirement</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certificate for Visa Requirement') ?>">Certificate for Visa Requirement</a></li>
+                        <li><a href="certservices.php?cert=<?= certSlug('Certificate for Embassy Requirement') ?>">Certificate for Embassy Requirement</a></li>
+    <li><a href="certservices.php?cert=<?= certSlug('Certificate for Graduate School Admission') ?>">Certificate for Graduate School Admission</a></li>
+    <li><a href="certservices.php?cert=<?= certSlug('Certificate for Professional Examination Requirement') ?>">Certificate for Professional Examination Requirement</a></li>
+</ul>
                 </div>
 
                
@@ -285,41 +315,227 @@ $dashboardUrl = $dashboardByRole[$role] ?? 'index.php';
         </div>
     </section>
 
-    <section class="trust-band" id="verify">
-        <div class="wrap">
-            <div>
-                <p class="section-eyebrow" style="color:var(--hcdc-gold-light)">How verification works</p>
-                <h2>A credential you can trust, checked in seconds</h2>
-                <p>Every diploma and transcript HCDC issues is hashed with BLAKE3 and anchored in our secure database.
-                    Uploading a document or scanning its QR code re-computes the hash and compares it against the
-                    stored record — no phone calls to the registrar required.</p>
-                <ul class="steps">
-                    <li><span class="t">Registrar approves the credential and generates a BLAKE3 hash.</span></li>
-                    <li><span class="t">The hash is stored securely alongside the certificate record.</span></li>
-                    <li><span class="t">A QR code is generated and attached to the digital document.</span></li>
-                    <li><span class="t">Anyone can scan or upload the file to confirm authenticity.</span></li>
-                </ul>
+    <style>
+    .request-steps {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .request-steps li {
+        position: relative;
+        display: flex;
+        gap: 16px;
+        padding: 0 0 28px 0;
+    }
+
+    .request-steps li:not(:last-child)::before {
+        content: "";
+        position: absolute;
+        left: 21px;
+        top: 44px;
+        bottom: -6px;
+        width: 2px;
+        background: linear-gradient(180deg, var(--hcdc-gold-light, #d9b568) 0%, rgba(217, 181, 104, 0.15) 100%);
+    }
+
+    .request-steps .step-num {
+        flex-shrink: 0;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: rgba(217, 181, 104, 0.12);
+        border: 1px solid var(--hcdc-gold-light, #d9b568);
+        color: var(--hcdc-gold-light, #d9b568);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 15px;
+        font-family: 'IBM Plex Mono', monospace;
+        z-index: 1;
+        transition: transform 0.25s ease, background 0.25s ease;
+    }
+
+    .request-steps li:hover .step-num {
+        transform: scale(1.08);
+        background: var(--hcdc-gold-light, #d9b568);
+        color: #10233f;
+    }
+
+    .request-steps .step-body .t-title {
+        display: block;
+        font-weight: 600;
+        color: #fff;
+        margin-bottom: 4px;
+        font-size: 15.5px;
+    }
+
+    .request-steps .step-body .t-desc {
+        display: block;
+        color: rgba(255, 255, 255, 0.72);
+        font-size: 14px;
+        line-height: 1.5;
+    }
+
+    .process-cards {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+    }
+
+    .process-card {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 14px;
+        padding: 22px 18px;
+        transition: transform 0.25s ease, background 0.25s ease, border-color 0.25s ease;
+    }
+
+    .process-card:hover {
+        transform: translateY(-4px);
+        background: rgba(217, 181, 104, 0.08);
+        border-color: var(--hcdc-gold-light, #d9b568);
+    }
+
+    .process-card .p-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        background: rgba(217, 181, 104, 0.15);
+        color: var(--hcdc-gold-light, #d9b568);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 12px;
+    }
+
+    .process-card .p-icon i {
+        font-size: 19px;
+    }
+
+    .process-card .num {
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 12.5px;
+        color: var(--hcdc-gold-light, #d9b568);
+        letter-spacing: 0.06em;
+        margin-bottom: 6px;
+    }
+
+    .process-card .lab {
+        font-weight: 600;
+        color: #fff;
+        font-size: 15px;
+        margin-bottom: 6px;
+    }
+
+    .process-card .desc {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 13.5px;
+        line-height: 1.5;
+    }
+
+    @media (max-width: 640px) {
+        .process-cards {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<section class="trust-band" id="verify">
+    <div class="wrap">
+        <div>
+            <p class="section-eyebrow" style="color:var(--hcdc-gold-light)">How to request a certificate</p>
+            <h2>Request your academic certificate in four simple steps</h2>
+            <p>Requesting academic certificates through CertiChain is fast and convenient. Students and alumni can
+                submit requests online, upload the required documents, complete the manual payment process, and
+                receive updates from the Registrar's Office until the certificate is ready for release or
+                download.</p>
+            <ul class="request-steps">
+                <li>
+                    <div class="step-num">01</div>
+                    <div class="step-body">
+                        <span class="t-title">Select the Certificate</span>
+                        <span class="t-desc">Browse the available academic certificates and choose the document you need.</span>
+                    </div>
+                </li>
+                <li>
+                    <div class="step-num">02</div>
+                    <div class="step-body">
+                        <span class="t-title">Upload the Required Documents</span>
+                        <span class="t-desc">Submit the required supporting documents based on the selected certificate. The Registrar will review your submission.</span>
+                    </div>
+                </li>
+               <li>
+    <div class="step-num">03</div>
+    <div class="step-body">
+        <span class="t-title">Pay at the Finance Office</span>
+        <span class="t-desc">Complete the required payment manually at the Finance Office. After payment, upload a clear image or PDF of your Official Receipt through the system for validation.</span>
+    </div>
+</li>
+                <li>
+    <div class="step-num">04</div>
+    <div class="step-body">
+        <span class="t-title">Registrar Approval &amp; Certificate Release</span>
+        <span class="t-desc">Once your request, requirements, and payment are verified, the Registrar approves your request. The certificate is then generated and made available for physical pickup at the Registrar's Office.</span>
+    </div>
+</li>
+            </ul>
+        </div>
+        <div class="process-cards">
+            <div class="process-card">
+                <div class="p-icon">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 4h16M4 10h10M4 16h6" />
+        <circle cx="17" cy="17" r="3" />
+        <path d="M19.5 19.5L22 22" />
+    </svg>
+</div>
+                <div class="num">STEP 01</div>
+                <div class="lab">Choose Certificate</div>
+                <div class="desc">Browse available certifications.</div>
             </div>
-            <div class="trust-stats">
-                <div class="stat-card">
-                    <div class="num">100%</div>
-                    <div class="lab">Registrar transactions available online</div>
-                </div>
-                <div class="stat-card">
-                    <div class="num">BLAKE3</div>
-                    <div class="lab">Credential hashing standard</div>
-                </div>
-                <div class="stat-card">
-                    <div class="num">24/7</div>
-                    <div class="lab">System availability</div>
-                </div>
-                <div class="stat-card">
-                    <div class="num">&lt;1 min</div>
-                    <div class="lab">Average verification time</div>
-                </div>
+            <div class="process-card">
+                <div class="p-icon">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <path d="M14 2v6h6" />
+        <path d="M12 18v-6M9.5 14.5L12 12l2.5 2.5" />
+    </svg>
+</div>
+                <div class="num">STEP 02</div>
+                <div class="lab">Upload Requirements</div>
+                <div class="desc">Submit the necessary documents online.</div>
+            </div>
+            <div class="process-card">
+                <div class="p-icon">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16l-2.5-1.5L14 21l-2.5-1.5L9 21l-2.5-1.5z" />
+        <path d="M8 8h8M8 12h8M8 16h4" />
+    </svg>
+</div>
+                <div class="num">STEP 03</div>
+                <div class="lab">Upload Official Receipt</div>
+<div class="desc">After paying at the Finance Office, upload your Official Receipt for payment confirmation.</div>
+            </div>
+            <div class="process-card">
+                <div class="p-icon">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="9" r="6" />
+        <path d="M9.5 8.5l1.8 1.8L15 6.5" />
+        <path d="M8 14.5L6 22l6-3 6 3-2-7.5" />
+    </svg>
+</div>
+                <div class="num">STEP 04</div>
+                <div class="lab">Receive Your Certificate</div>
+<div class="desc">Claim your physical certificate at the Registrar's Office once approved.</div>
             </div>
         </div>
-    </section>
+    </div>
+</section>
 
     <section id="news">
         <div class="wrap">
@@ -366,29 +582,29 @@ $dashboardUrl = $dashboardByRole[$role] ?? 'index.php';
                 <div class="footer-brand">
                     <div class="school">Holy Cross of Davao College</div>
                     <p>An Archdiocesan Catholic institution in Davao City, serving students since 1951. The Office of
-                        Registration and Records Management is proud to bring secure, hash-verified credential
-                        services to every student.</p>
+    Registration and Records Management is proud to bring secure, streamlined credential services
+    to every student.</p>
                 </div>
                 <div>
                     <h4>Registrar services</h4>
-                    <ul>
-                        <li><a href="#services">Graduation application</a></li>
-                        <li><a href="#services">Transcript request</a></li>
-                        <li><a href="#services">Diploma request</a></li>
-                        <li><a href="#services">Online clearance</a></li>
-                    </ul>
+<ul>
+    <li><a href="certservices.php?cert=<?= certSlug('Certificate of Graduation') ?>">Graduation application</a></li>
+    <li><a href="certservices.php?cert=<?= certSlug('Official Transcript of Records (TOR)') ?>">Transcript request</a></li>
+    <li><a href="certservices.php?cert=<?= certSlug('Original Diploma') ?>">Diploma request</a></li>
+    <li><a href="#services">Online clearance</a></li>
+</ul>
                 </div>
                 <div>
-                    <h4>Helpful links</h4>
-                    <ul>
-                        <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'auth/login.php' ?>">Student portal</a></li>
-                        <li><a href="#">Academic calendar</a></li>
-                        <li><a href="#">Downloadable forms</a></li>
-                        <li><a href="#verify">Credential verification</a></li>
-                    </ul>
+                   <h4>Helpful links</h4>
+<ul>
+    <li><a href="<?= $isLoggedIn ? htmlspecialchars($dashboardUrl) : 'auth/login.php' ?>">Student portal</a></li>
+    <li><a href="https://studentportal.hcdc.edu.ph" target="_blank" rel="noopener">HCDC Student Portal</a></li>
+    <li><a href="https://www.instagram.com/hcdcofficial/" target="_blank" rel="noopener">Instagram</a></li>
+    <li><a href="https://www.facebook.com/hcdcofficial" target="_blank" rel="noopener">Facebook</a></li>
+</ul>
                 </div>
                 <div>
-                    <h4>Contact</h4>
+                    <h4>Contact</h4>    
                     <ul>
                         <li>Sta. Ana Avenue, Davao City</li>
                         <li>Monday to Friday, 8:00 AM to 5:00 PM</li>
@@ -400,8 +616,8 @@ $dashboardUrl = $dashboardByRole[$role] ?? 'index.php';
                 <span>&copy; <?= date('Y') ?> Holy Cross of Davao College &middot; The Office of Registration and Records
                     Management</span>
                 <div class="footer-social">
-                    <a href="#" aria-label="Facebook"><i class="ti ti-brand-facebook"></i></a>
-                    <a href="#" aria-label="Instagram"><i class="ti ti-brand-instagram"></i></a>
+                    <a href="https://www.facebook.com/hcdcofficial" aria-label="Facebook"><i class="ti ti-brand-facebook"></i></a>
+                    <a href="https://www.instagram.com/hcdcofficial/" aria-label="Instagram"><i class="ti ti-brand-instagram"></i></a>
                     <a href="#" aria-label="YouTube"><i class="ti ti-brand-youtube"></i></a>
                 </div>
             </div>
@@ -410,33 +626,14 @@ $dashboardUrl = $dashboardByRole[$role] ?? 'index.php';
 
 </body>
 <script>
-    const spotlightPlaylist = [
-        {
-            videoId: "_rS2uEvG0ik",
-            title: "How to request your Transcript of Records",
-            sub: "A quick walkthrough of the counter, the queue, and what to bring for your request."
-        },
-        {
-            videoId: "YA9IOYDH0xY",
-            title: "Applying for graduation online",
-            sub: "Step-by-step guide to submitting your graduation application through the portal."
-        },
-        {
-            videoId: "fgYtNPEtpm4",
-            title: "Requesting a diploma or replacement copy",
-            sub: "What to prepare and how QR-verifiable diplomas are issued."
-        },
-        {
-            videoId: "QnlHfEGHNMA",
-            title: "Certificate of enrollment & good moral",
-            sub: "How to request common registrar certifications online."
-        },
-        {
-            videoId: "D0uOGq7fMn0",
-            title: "Completing your online clearance",
-            sub: "Routing clearance across departments and settling balances online."
-        }
-    ];
+    const spotlightPlaylist = <?= json_encode(array_map(function ($c) {
+        return [
+            'videoId'  => $c['videoId'],
+            'title'    => $c['title'],
+            'sub'      => $c['sub'],
+            'certSlug' => certSlug($c['title']),
+        ];
+    }, $spotlightCerts), JSON_UNESCAPED_SLASHES) ?>;
 
     let spotlightIndex = 0;
     let spotlightPlayer;
@@ -469,11 +666,12 @@ $dashboardUrl = $dashboardByRole[$role] ?? 'index.php';
     }
 
     function updateSpotlightText() {
-        const item = spotlightPlaylist[spotlightIndex];
-        document.getElementById("spotlight-title").textContent = item.title;
-        document.getElementById("spotlight-sub").textContent = item.sub;
-        renderDots();
-    }
+    const item = spotlightPlaylist[spotlightIndex];
+    document.getElementById("spotlight-title").textContent = item.title;
+    document.getElementById("spotlight-sub").textContent = item.sub;
+    document.getElementById("spotlight-request-btn").href = "certservices.php?cert=" + item.certSlug;
+    renderDots();
+}
 
     function getNextIndex() {
         return (spotlightIndex + 1) % spotlightPlaylist.length;

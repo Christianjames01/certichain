@@ -58,15 +58,15 @@ $pageTitle = $cert
                 <img class="crest" src="public/assets/logo/hcdc-logo.jpg" alt="Holy Cross of Davao College logo">
                 <div class="brand-text">
                     <div class="school">Holy Cross of Davao College</div>
-                    <div class="office">The Office of Registration and Records Management &middot; CertiChain AI</div>
+                    <div class="office">The Office of Registration and Records Management &middot; CertiChain</div>
                 </div>
             </div>
             <nav class="primary">
-                <a href="index.php#services">Registrar Services</a>
-                <a href="index.php#verify">Credential Verification</a>
-                <a href="index.php#academics">Academic References</a>
+                <a href="index.php">Home</a>
+                <a href="certservices.php">Registrar Services</a>
+                <a href="index.php#verify">How to Request</a>
                 <a href="index.php#news">Announcements</a>
-                <a href="index.php#about">About</a>
+                <a href="about.php">About</a>
             </nav>
             <div class="header-cta">
                 <?php if ($isLoggedIn): ?>
