@@ -53,10 +53,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             log_activity($pdo, (int) $user['id'], $user['role'], 'login');
 
             $dashboardByRole = [
-                'student'        => '../student/submit_request.php',
-                'alumni'         => '../student/submit_request.php',
-                'employee'       => '../employee/requests.php',
-                'registrar_head' => '../registrar_head/assign_employee.php',
+                'student'        => '../student/dashboard.php',
+                'alumni'         => '../student/dashboard.php',
+                'employee'       => '../employee/dashboard.php',
+                'registrar_head' => '../registrar_head/dashboard.php',
             ];
             header('Location: ' . ($dashboardByRole[$user['role']] ?? '../index.php'));
             exit;

@@ -17,19 +17,6 @@ $userId    = (int) $_SESSION['user_id'];
 $firstName = $_SESSION['first_name'] ?? '';
 $role      = $_SESSION['role'];
 
-/**
- * ------------------------------------------------------------------
- * Stats + recent requests
- * ------------------------------------------------------------------
- * NOTE: Column names below are best-guess placeholders (request_id,
- * user_id, status, document_type_id / cert_type, created_at) since
- * the exact `requests` table schema wasn't available when this file
- * was generated. If a query below throws, adjust the column names
- * to match `DESCRIBE requests;` from phpMyAdmin — same fix pattern
- * as the login.php `user_id` issue. Everything fails soft to an
- * empty state so this page won't fatal-error either way.
- * ------------------------------------------------------------------
- */
 $stats = [
     'total'    => 0,
     'pending'  => 0,
@@ -41,10 +28,10 @@ $allRequests    = [];
 $dbError = false;
 
 try {
-    $stmt = $pdo->prepare(
+   $stmt = $pdo->prepare(
         'SELECT status, COUNT(*) AS c
          FROM requests
-         WHERE user_id = :uid
+         WHERE requester_user_id = :uid
          GROUP BY status'
     );
     $stmt->execute([':uid' => $userId]);
@@ -52,7 +39,7 @@ try {
         $status = strtolower((string) $row['status']);
         $count  = (int) $row['c'];
         $stats['total'] += $count;
-        if (in_array($status, ['pending', 'processing', 'under_review'], true)) {
+        if (in_array($status, ['pending_review', 'pending', 'processing', 'under_review'], true)) {
             $stats['pending'] += $count;
         } elseif (in_array($status, ['ready', 'ready_for_pickup', 'approved'], true)) {
             $stats['ready'] += $count;
@@ -61,12 +48,14 @@ try {
         }
     }
 
-    $stmt = $pdo->prepare(
-        "SELECT r.request_id, r.status, r.created_at,
-                COALESCE(dt.name, r.cert_type) AS cert_name
+   $stmt = $pdo->prepare(
+        "SELECT r.request_id, r.request_code, r.status, r.created_at,
+                dt.document_name AS cert_name,
+                p.program_name
          FROM requests r
          LEFT JOIN document_types dt ON dt.document_type_id = r.document_type_id
-         WHERE r.user_id = :uid
+         LEFT JOIN programs p        ON p.program_id = r.program_id
+         WHERE r.requester_user_id = :uid
          ORDER BY r.created_at DESC"
     );
     $stmt->execute([':uid' => $userId]);
@@ -79,12 +68,17 @@ try {
 function statusBadgeClass(string $status): string
 {
     $s = strtolower($status);
-    if (in_array($s, ['pending', 'processing', 'under_review'], true)) return 'badge-pending';
+    if (in_array($s, ['pending_review', 'pending', 'processing', 'under_review'], true)) return 'badge-pending';
     if (in_array($s, ['ready', 'ready_for_pickup', 'approved'], true)) return 'badge-ready';
     if (in_array($s, ['released', 'completed', 'claimed'], true)) return 'badge-released';
     if (in_array($s, ['rejected', 'declined', 'cancelled'], true)) return 'badge-rejected';
     return 'badge-pending';
 }
+
+// Pipeline widget fill state — a node is "lit" once it has ever had volume.
+$pipelineHasPending  = $stats['pending']  > 0;
+$pipelineHasReady    = $stats['ready']    > 0;
+$pipelineHasReleased = $stats['released'] > 0;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -107,174 +101,251 @@ function statusBadgeClass(string $status): string
 
 <body>
 
-    <div class="utility-social">
-        <a href="#" aria-label="Facebook"><i class="ti ti-brand-facebook"></i></a>
-        <a href="#" aria-label="Instagram"><i class="ti ti-brand-instagram"></i></a>
-        <a href="#" aria-label="YouTube"><i class="ti ti-brand-youtube"></i></a>
-    </div>
+    <div class="app-shell">
 
-    <header class="main">
-        <div class="header-row">
-            <div class="brand">
+        <!-- ===================== SIDEBAR ===================== -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
                 <img class="crest" src="../public/assets/logo/hcdc-logo.jpg" alt="Holy Cross of Davao College logo">
                 <div class="brand-text">
                     <div class="school">Holy Cross of Davao College</div>
-                    <div class="office">The Office of Registration and Records Management &middot; CertiChain</div>
+                    <div class="office">CertiChain &middot; Student Portal</div>
                 </div>
             </div>
-            <nav class="dash-nav" id="dash-nav">
+
+            <nav class="side-nav" id="dash-nav">
                 <button type="button" class="active" data-tab="overview">
                     <i class="ti ti-layout-dashboard"></i>Overview
                 </button>
                 <button type="button" data-tab="requests">
                     <i class="ti ti-file-text"></i>My Requests
+                    <?php if ($stats['total'] > 0): ?><span class="side-nav-count"><?= (int) $stats['total'] ?></span><?php endif; ?>
                 </button>
                 <button type="button" data-tab="account">
                     <i class="ti ti-user"></i>Account
                 </button>
             </nav>
-            <div class="header-cta">
-                <span style="font-size:13.5px;color:var(--hcdc-ink-soft);margin-right:4px;">
-                    Hi, <?= htmlspecialchars($firstName) ?>
-                </span>
-                <a href="submit_request.php" class="btn btn-gold">
-                    <i class="ti ti-file-plus"></i>New Request
+
+            <div class="chain-status" aria-label="Your request pipeline">
+                <div class="chain-status-label">Your pipeline</div>
+                <div class="chain-track">
+                    <div class="chain-node <?= $pipelineHasPending ? 'lit lit-pending' : '' ?>">
+                        <span class="chain-num"><?= (int) $stats['pending'] ?></span>
+                        <span class="chain-tag">Pending</span>
+                    </div>
+                    <div class="chain-link <?= $pipelineHasPending ? 'lit' : '' ?>"></div>
+                    <div class="chain-node <?= $pipelineHasReady ? 'lit lit-ready' : '' ?>">
+                        <span class="chain-num"><?= (int) $stats['ready'] ?></span>
+                        <span class="chain-tag">Ready</span>
+                    </div>
+                    <div class="chain-link <?= $pipelineHasReady ? 'lit' : '' ?>"></div>
+                    <div class="chain-node <?= $pipelineHasReleased ? 'lit lit-released' : '' ?>">
+                        <span class="chain-num"><?= (int) $stats['released'] ?></span>
+                        <span class="chain-tag">Released</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <a href="../student/dashboard.php" class="btn btn-gold btn-block">
+                    <i class="ti ti-arrow-left"></i>Back to Dashboard
                 </a>
-                <a href="../auth/logout.php" class="btn btn-ghost"><i class="ti ti-logout"></i>Logout</a>
+                <a href="../auth/logout.php" class="btn btn-ghost-dark btn-block">
+                    <i class="ti ti-logout"></i>Logout
+                </a>
             </div>
-        </div>
-    </header>
+        </aside>
 
-    <section class="dash-hero">
-        <div class="wrap">
-            <div>
-                <h1>Welcome back, <?= htmlspecialchars($firstName) ?></h1>
-                <p>Here's an overview of your certificate requests and account status.</p>
-            </div>
-            <a href="submit_request.php" class="btn btn-gold">
-                <i class="ti ti-file-certificate"></i>Request a Certificate
-            </a>
-        </div>
-    </section>
+        <!-- ===================== MAIN COLUMN ===================== -->
+        <div class="main-col">
 
-    <div class="wrap">
+            <header class="topbar">
+                <div>
+                    <div class="topbar-eyebrow">Welcome back</div>
+                    <h1><?= htmlspecialchars($firstName ?: 'Student') ?></h1>
+                </div>
+                <div class="topbar-right">
+                    <span class="role-chip"><?= htmlspecialchars(ucfirst($role)) ?></span>
+                </div>
+            </header>
 
-        <div class="dash-stats">
-            <div class="dash-stat-card">
-                <div class="num"><?= (int) $stats['total'] ?></div>
-                <div class="lab">Total requests</div>
-            </div>
-            <div class="dash-stat-card">
-                <div class="num"><?= (int) $stats['pending'] ?></div>
-                <div class="lab">Pending / in review</div>
-            </div>
-            <div class="dash-stat-card">
-                <div class="num"><?= (int) $stats['ready'] ?></div>
-                <div class="lab">Ready for pickup</div>
-            </div>
-            <div class="dash-stat-card">
-                <div class="num"><?= (int) $stats['released'] ?></div>
-                <div class="lab">Released</div>
-            </div>
-        </div>
+            <main class="dash-content">
 
-        <div class="dash-layout">
-            <div>
-                <div class="dash-card">
-                    <div class="dash-card-head">
-                        <h2>Recent requests</h2>
-                        <a href="submit_request.php" class="section-link" style="font-size:12.5px;">View all</a>
-                    </div>
-
-                    <?php if ($dbError): ?>
-                        <div class="empty-state">
-                            <i class="ti ti-alert-triangle"></i>
-                            Couldn't load your requests right now. Please try again later.
+                <!-- ---------- OVERVIEW TAB ---------- -->
+                <section class="dash-tab active" data-tab-panel="overview">
+                    <div class="dash-card">
+                        <div class="dash-card-head">
+                            <h2>Recent requests</h2>
+                            <button type="button" class="section-link link-btn" data-goto-tab="requests">View all</button>
                         </div>
-                    <?php elseif (!$recentRequests): ?>
-                        <div class="empty-state">
-                            <i class="ti ti-file-off"></i>
-                            You haven't submitted any certificate requests yet.<br>
-                            <a href="submit_request.php" class="link-muted">Submit your first request &rarr;</a>
-                        </div>
-                    <?php else: ?>
-                        <table class="req-table">
-                            <thead>
-                                <tr>
-                                    <th>Certificate</th>
-                                    <th>Date requested</th>
-                                    <th>Status</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($recentRequests as $r): ?>
+
+                        <?php if ($dbError): ?>
+                            <div class="empty-state">
+                                <i class="ti ti-alert-triangle"></i>
+                                Couldn't load your requests right now. Please try again later.
+                            </div>
+                        <?php elseif (!$recentRequests): ?>
+                            <div class="empty-state">
+                                <i class="ti ti-file-off"></i>
+                                You haven't submitted any certificate requests yet.<br>
+                                <a href="submit_request.php" class="link-muted">Submit your first request &rarr;</a>
+                            </div>
+                        <?php else: ?>
+                            <table class="req-table">
+                              <thead>
                                     <tr>
-                                        <td class="cert-name"><?= htmlspecialchars($r['cert_name'] ?? 'Certificate') ?></td>
-                                        <td class="req-date">
-                                            <?= htmlspecialchars(date('M j, Y', strtotime((string) $r['created_at']))) ?>
-                                        </td>
-                                        <td>
-                                            <span class="badge <?= statusBadgeClass((string) $r['status']) ?>">
-                                                <?= htmlspecialchars(str_replace('_', ' ', (string) $r['status'])) ?>
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <a href="view_request.php?id=<?= (int) $r['request_id'] ?>" class="link-muted"
-                                                style="font-size:12.5px;">View &rarr;</a>
-                                        </td>
+                                        <th>Certificate</th>
+                                        <th>Program</th>
+                                        <th>Date requested</th>
+                                        <th>Status</th>
+                                        <th></th>
                                     </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    <?php endif; ?>
-                </div>
-            </div>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($recentRequests as $r): ?>
+                                        <tr>
+                                            <td class="cert-name"><?= htmlspecialchars($r['cert_name'] ?? 'Certificate') ?></td>
+                                            <td><?= htmlspecialchars($r['program_name'] ?? '—') ?></td>
+                                            <td class="req-date">
+                                                <?= htmlspecialchars(date('M j, Y', strtotime((string) $r['created_at']))) ?>
+                                            </td>
+                                            <td>
+                                                <span class="badge <?= statusBadgeClass((string) $r['status']) ?>">
+                                                    <?= htmlspecialchars(str_replace('_', ' ', (string) $r['status'])) ?>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <a href="view_request.php?code=<?= urlencode((string) $r['request_code']) ?>" class="link-muted"                                                    style="font-size:12.5px;">View &rarr;</a>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        <?php endif; ?>
+                    </div>
 
-            <div>
-                <div class="dash-card">
-                    <div class="dash-card-head">
-                        <h2>Quick actions</h2>
+                    <div class="dash-card">
+                        <div class="dash-card-head">
+                            <h2>Quick actions</h2>
+                        </div>
+                        <div class="quick-actions">
+                            <a href="submit_request.php" class="quick-action">
+                                <i class="ti ti-file-certificate"></i>Request a certificate
+                            </a>
+                            <a href="submit_request.php" class="quick-action">
+                                <i class="ti ti-upload"></i>Upload official receipt
+                            </a>
+                            <a href="../certservices.php" class="quick-action">
+                                <i class="ti ti-list-details"></i>Browse all certificate types
+                            </a>
+                        </div>
                     </div>
-                    <div class="quick-actions">
-                        <a href="submit_request.php" class="quick-action">
-                            <i class="ti ti-file-certificate"></i>Request a certificate
-                        </a>
-                        <a href="submit_request.php" class="quick-action">
-                            <i class="ti ti-upload"></i>Upload official receipt
-                        </a>
-                        <a href="../certservices.php" class="quick-action">
-                            <i class="ti ti-list-details"></i>Browse all certificate types
-                        </a>
-                    </div>
-                </div>
+                </section>
 
-                <div class="dash-card">
-                    <div class="dash-card-head">
-                        <h2>Account</h2>
+                <!-- ---------- MY REQUESTS TAB ---------- -->
+                <section class="dash-tab" data-tab-panel="requests">
+                    <div class="dash-card">
+                        <div class="dash-card-head">
+                            <h2>All requests</h2>
+                            <a href="submit_request.php" class="section-link" style="font-size:12.5px;">New request</a>
+                        </div>
+
+                        <?php if ($dbError): ?>
+                            <div class="empty-state">
+                                <i class="ti ti-alert-triangle"></i>
+                                Couldn't load your requests right now. Please try again later.
+                            </div>
+                        <?php elseif (!$allRequests): ?>
+                            <div class="empty-state">
+                                <i class="ti ti-file-off"></i>
+                                You haven't submitted any certificate requests yet.<br>
+                                <a href="submit_request.php" class="link-muted">Submit your first request &rarr;</a>
+                            </div>
+                        <?php else: ?>
+                            <div class="full-req-table-wrap">
+                                <table class="req-table">
+                                  <thead>
+                                        <tr>
+                                            <th>Certificate</th>
+                                            <th>Program</th>
+                                            <th>Date requested</th>
+                                            <th>Status</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($allRequests as $r): ?>
+                                            <tr>
+<td class="cert-name"><?= htmlspecialchars($r['cert_name'] ?? 'Certificate') ?></td>
+                                                <td><?= htmlspecialchars($r['program_name'] ?? '—') ?></td>
+                                                <td class="req-date">
+                                                    <?= htmlspecialchars(date('M j, Y', strtotime((string) $r['created_at']))) ?>
+                                                </td>
+                                                <td>
+                                                    <span class="badge <?= statusBadgeClass((string) $r['status']) ?>">
+                                                        <?= htmlspecialchars(str_replace('_', ' ', (string) $r['status'])) ?>
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <a href="view_request.php?id=<?= (int) $r['request_id'] ?>" class="link-muted"
+                                                        style="font-size:12.5px;">View &rarr;</a>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
                     </div>
-                    <div class="account-row">
-                        <span class="k">Name</span>
-                        <span class="v"><?= htmlspecialchars($firstName) ?></span>
+                </section>
+
+                <!-- ---------- ACCOUNT TAB ---------- -->
+                <section class="dash-tab" data-tab-panel="account">
+                    <div class="dash-card">
+                        <div class="dash-card-head">
+                            <h2>Account</h2>
+                        </div>
+                        <div class="account-row">
+                            <span class="k">Name</span>
+                            <span class="v"><?= htmlspecialchars($firstName) ?></span>
+                        </div>
+                        <div class="account-row">
+                            <span class="k">Role</span>
+                            <span class="v"><?= htmlspecialchars(ucfirst($role)) ?></span>
+                        </div>
+                        <div class="account-row">
+                            <span class="k">Total requests filed</span>
+                            <span class="v"><?= (int) $stats['total'] ?></span>
+                        </div>
                     </div>
-                    <div class="account-row">
-                        <span class="k">Role</span>
-                        <span class="v"><?= htmlspecialchars(ucfirst($role)) ?></span>
-                    </div>
-                </div>
-            </div>
+                </section>
+
+            </main>
         </div>
-
     </div>
 
-    <footer id="about">
-        <div class="wrap">
-            <div class="footer-bottom" style="border-top:none;padding-top:0;">
-                <span>&copy; <?= date('Y') ?> Holy Cross of Davao College &middot; The Office of Registration and Records
-                    Management</span>
-            </div>
-        </div>
-    </footer>
+    <script>
+        // Sidebar tab switching — shows/hides .dash-tab panels and toggles
+        // the .active state on the corresponding .side-nav button.
+        (function () {
+            const navButtons = document.querySelectorAll('#dash-nav button[data-tab]');
+            const panels = document.querySelectorAll('.dash-tab[data-tab-panel]');
+
+            function activate(tabName) {
+                navButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tabName));
+                panels.forEach(p => p.classList.toggle('active', p.dataset.tabPanel === tabName));
+            }
+
+            navButtons.forEach(btn => {
+                btn.addEventListener('click', () => activate(btn.dataset.tab));
+            });
+
+            // "View all" link on the Overview card jumps straight to the Requests tab.
+            document.querySelectorAll('[data-goto-tab]').forEach(el => {
+                el.addEventListener('click', () => activate(el.dataset.gotoTab));
+            });
+        })();
+    </script>
 
 </body>
 

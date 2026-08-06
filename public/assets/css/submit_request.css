@@ -1,0 +1,193 @@
+/* submit-request.php — extends index.css and student-dashboard.css,
+   reuses the same design tokens (--hcdc-navy, --hcdc-gold, etc.) */
+
+.page-lede {
+    font-size: 15px;
+    color: var(--ink-soft);
+    max-width: 640px;
+    margin: 0 0 28px;
+}
+
+/* Two-column layout: form on the left, routing + quick actions on the right */
+.dash-content-wide {
+    max-width: 1080px;
+}
+
+.req-form-layout {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 24px;
+    align-items: start;
+}
+
+/* Form card */
+.form-card .field {
+    margin-bottom: 20px;
+}
+
+.form-card label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 8px;
+}
+
+.form-card label .hint {
+    font-weight: 400;
+    color: var(--ink-soft);
+    font-size: 12px;
+}
+
+.form-card select,
+.form-card textarea {
+    width: 100%;
+    padding: 11px 13px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--ink);
+    background: var(--white);
+    resize: vertical;
+}
+
+.form-card select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23524E46' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+}
+
+.form-card select:focus,
+.form-card textarea:focus {
+    outline: none;
+    border-color: var(--hcdc-gold);
+    box-shadow: 0 0 0 3px rgba(198, 161, 91, 0.18);
+}
+
+.form-card textarea {
+    font-family: var(--font-body);
+    line-height: 1.5;
+}
+
+/* Alerts */
+.form-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    margin-bottom: 20px;
+}
+
+.form-alert i {
+    font-size: 17px;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.form-alert-info {
+    background: rgba(14, 42, 82, 0.06);
+    border: 1px solid rgba(14, 42, 82, 0.14);
+    color: var(--hcdc-navy);
+}
+
+.form-alert-info i {
+    color: var(--hcdc-navy);
+}
+
+.form-alert-success {
+    background: rgba(34, 139, 87, 0.1);
+    border: 1px solid rgba(34, 139, 87, 0.22);
+    color: #1c7a4c;
+}
+
+.form-alert-success i {
+    color: #1c7a4c;
+}
+
+.form-alert-danger {
+    background: rgba(166, 25, 46, 0.08);
+    border: 1px solid rgba(166, 25, 46, 0.2);
+    color: var(--hcdc-red);
+}
+
+.form-alert-danger i {
+    color: var(--hcdc-red);
+}
+
+/* Routing card (right column, navy) */
+.routing-card {
+    background: var(--hcdc-navy);
+    background: radial-gradient(400px 240px at 90% 0%, rgba(198, 161, 91, 0.16), transparent), var(--hcdc-navy);
+    color: var(--white);
+    padding: 26px;
+}
+
+.routing-card .label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--hcdc-gold-light);
+    margin-bottom: 10px;
+}
+
+.routing-card .college-name {
+    font-family: var(--font-display);
+    font-size: 19px;
+    font-weight: 600;
+    line-height: 1.3;
+    margin-bottom: 6px;
+}
+
+.routing-card .college-code {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 16px;
+}
+
+.routing-card .note {
+    font-size: 13px;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.72);
+    margin: 0;
+}
+
+/* Quick actions (reuses dash-card, adds link styling here since
+   student-dashboard.css's .quick-action assumes a slightly different
+   context) */
+.quick-actions .quick-action {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--ink);
+}
+
+.quick-actions .quick-action:hover {
+    border-color: var(--hcdc-gold);
+    background: var(--parchment-dim);
+}
+
+.quick-actions .quick-action i {
+    font-size: 17px;
+    color: var(--hcdc-red);
+    flex-shrink: 0;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .req-form-layout {
+        grid-template-columns: 1fr;
+    }
+}

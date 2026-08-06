@@ -162,9 +162,6 @@ $spotlightCerts = [
                 <div>
                     <p class="section-eyebrow">Online registrar services</p>
                     <h2 class="section-title">Every certificate and credential, without the counter line</h2>
-                </div>
-                <a href="#verify" class="section-link">Verify a credential</a>
-            </div>
             <div class="services-categories">
 
                 <div class="category-card">

@@ -1,0 +1,194 @@
+/* view_request.php — extends index.css + student-dashboard.css,
+   reuses the same design tokens and card language. */
+
+.dash-content-wide {
+    max-width: 1080px;
+}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    margin-bottom: 18px;
+}
+
+.back-link:hover {
+    color: var(--hcdc-red);
+}
+
+.back-link i {
+    font-size: 15px;
+}
+
+/* Header: request code / title + status badge */
+.view-req-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.view-req-code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: .04em;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+}
+
+.view-req-title {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--hcdc-navy);
+    margin: 0;
+}
+
+/* Two-column layout, same shape as submit_request's req-form-layout */
+.req-form-layout {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: 20px;
+    align-items: start;
+}
+
+@media (max-width: 900px) {
+    .req-form-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Routing card, same visual as submit_request.php's routing-card */
+.routing-card .label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+}
+
+.routing-card .college-name {
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--hcdc-navy);
+}
+
+.routing-card .college-code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-top: 2px;
+}
+
+.routing-card .note {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    margin: 12px 0 0;
+    line-height: 1.6;
+}
+
+/* Remarks block */
+.remarks-text {
+    font-size: 14px;
+    color: var(--ink);
+    line-height: 1.7;
+    margin: 0 0 14px;
+    white-space: pre-wrap;
+}
+
+.note {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin: 0 0 14px;
+}
+
+/* ---------------------------------------------------------------
+   Status timeline
+   --------------------------------------------------------------- */
+.timeline {
+    display: flex;
+    align-items: center;
+    padding: 10px 4px 20px;
+}
+
+.timeline-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.timeline-dot {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--parchment-dim);
+    border: 1.5px solid var(--line);
+    color: var(--ink-soft);
+    flex-shrink: 0;
+}
+
+.timeline-step.done .timeline-dot {
+    background: var(--hcdc-navy);
+    border-color: var(--hcdc-navy);
+    color: var(--white);
+}
+
+.timeline-step.rejected .timeline-dot {
+    background: var(--hcdc-red);
+    border-color: var(--hcdc-red);
+    color: var(--white);
+}
+
+.timeline-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    white-space: nowrap;
+}
+
+.timeline-step.done .timeline-label {
+    color: var(--ink);
+}
+
+.timeline-bar {
+    height: 2px;
+    flex: 1 1 40px;
+    background: var(--line);
+    margin-bottom: 22px;
+    min-width: 24px;
+}
+
+.timeline-bar.done {
+    background: var(--hcdc-navy);
+}
+
+.timeline-bar.rejected {
+    background: var(--hcdc-red);
+}
+
+@media (max-width: 480px) {
+    .timeline-label {
+        font-size: 10.5px;
+    }
+
+    .timeline-dot {
+        width: 28px;
+        height: 28px;
+        font-size: 11px;
+    }
+}
