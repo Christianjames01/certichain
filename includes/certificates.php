@@ -44,8 +44,8 @@ $CERT_DEFAULTS = [
             'Log in to your CertiChain AI student portal.',
             'Select this certificate under "Request a Document."',
             'Fill out and submit the request form.',
-            'Settle the fee online through the portal.',
-            'Wait for registrar approval, then download or claim your certificate.',
+            'Pay the fee at the Finance Office and upload your Official Receipt.',
+            'Wait for registrar approval, then claim your certificate at the Registrar\'s Office.',
         ],
     ],
     'academic-records' => [
@@ -57,12 +57,12 @@ $CERT_DEFAULTS = [
             'Duly accomplished request form',
             'Authorization letter and ID of representative, if claiming on your behalf',
         ],
-        'steps' => [
+       'steps' => [
             'Log in to your CertiChain AI student portal.',
             'Select this document under "Academic Records."',
             'Indicate the purpose and number of copies needed.',
-            'Settle the fee online.',
-            'The registrar reviews, hashes, and QR-seals the document, then notifies you when it is ready.',
+            'Pay the fee at the Finance Office and upload your Official Receipt.',
+            'The registrar reviews and prepares the document, then notifies you when it is ready for release.',
         ],
     ],
     'graduation' => [
@@ -93,9 +93,9 @@ $CERT_DEFAULTS = [
         'steps' => [
             'Log in to your student/alumni portal and select this document.',
             'Upload supporting documents if requesting a replacement or duplicate.',
-            'Settle the fee online.',
-            'The registrar prepares, hashes, and QR-seals the diploma record.',
-            'Claim in person or download the verifiable digital copy once notified.',
+            'Pay the fee at the Finance Office and upload your Official Receipt.',
+            'The registrar prepares and reviews the diploma record.',
+            'Claim your diploma in person at the Registrar\'s Office once notified.',
         ],
     ],
     'transfer' => [
@@ -121,11 +121,11 @@ $CERT_DEFAULTS = [
             'Valid government-issued ID',
             'Requesting party details (employer, agency, or institution), if applicable',
         ],
-        'steps' => [
+       'steps' => [
             'Upload or present the document you need authenticated.',
             'The registrar cross-checks it against official academic records.',
-            'A BLAKE3 hash is generated and a QR code attached for independent verification.',
-            'Download the authenticated copy or share the verification link with the requesting party.',
+            'Pay the fee at the Finance Office and upload your Official Receipt.',
+            'Claim the authenticated copy in person at the Registrar\'s Office.',
         ],
     ],
     'curriculum' => [
@@ -136,11 +136,11 @@ $CERT_DEFAULTS = [
             'Program and year/curriculum you are requesting information for',
             'Duly accomplished request form',
         ],
-        'steps' => [
+       'steps' => [
             'Log in to the student portal and select this certificate.',
             'Specify the program, curriculum year, and purpose.',
-            'Settle the fee online.',
-            'Download the certificate once the registrar approves the request.',
+            'Pay the fee at the Finance Office and upload your Official Receipt.',
+            'Claim the certificate at the Registrar\'s Office once the request is approved.',
         ],
     ],
     'special-purpose' => [
@@ -151,11 +151,11 @@ $CERT_DEFAULTS = [
             'Name and address of the receiving institution/agency',
             'Duly accomplished request form',
         ],
-        'steps' => [
+       'steps' => [
             'Log in to the student portal and select this certificate.',
             'Indicate the specific purpose and the receiving party.',
-            'Settle the fee online.',
-            'Download the certificate once approved, or have it sent directly to the receiving institution.',
+            'Pay the fee at the Finance Office and upload your Official Receipt.',
+            'Claim the certificate at the Registrar\'s Office once approved, or have it sent directly to the receiving institution.',
         ],
     ],
     'clearance' => [
@@ -168,7 +168,7 @@ $CERT_DEFAULTS = [
         'steps' => [
             'Log in to the student portal and open "Clearance."',
             'The system routes your clearance to each department automatically.',
-            'Track sign-offs in real time and settle any flagged balances online.',
+            'Track sign-offs in real time and settle any flagged balances at the Finance Office.',
             'Once all departments clear you, your clearance certificate is issued automatically.',
         ],
     ],
@@ -182,8 +182,8 @@ $CERT_DEFAULTS = [
         'steps' => [
             'Log in to the student portal and select this document under "Printouts."',
             'Confirm the term/school year the printout should cover.',
-            'Settle the fee online.',
-            'Download or claim your printed copy once released.',
+            'Pay the fee at the Finance Office and upload your Official Receipt.',
+            'Claim your printed copy at the Registrar\'s Office once released.',
         ],
     ],
     'maritime' => [
@@ -199,7 +199,7 @@ $CERT_DEFAULTS = [
             'Log in to the student portal and select this document under "Maritime (BSMT) Documents."',
             'Indicate the purpose (e.g. board exam application, employment, cross-enrollment).',
             'Route the request for Program Head/OBTO clearance.',
-            'Settle the fee online.',
+            'Pay the fee at the Finance Office and upload your Official Receipt.',
             'Claim your document at the Registrar\'s Office once approved and released.',
         ],
     ],
@@ -391,7 +391,7 @@ if (!function_exists('certFind')) {
                     'fee'          => 'Contact the registrar',
                     'processing'   => '3–5 working days',
                     'requirements' => ['Valid school ID or government-issued ID', 'Duly accomplished request form'],
-                    'steps'        => ['Log in to the student portal.', 'Submit your request.', 'Settle the fee online.', 'Wait for approval and download or claim your document.'],
+                    'steps'        => ['Log in to the student portal.', 'Submit your request.', 'Pay the fee at the Finance Office and upload your Official Receipt.', 'Wait for approval, then claim your document at the Registrar\'s Office.'],
                 ];
                 $override = $CERT_OVERRIDES[$title] ?? [];
 

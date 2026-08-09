@@ -680,3 +680,19 @@
         font-size: 22px;
     }
 }
+
+.fc-title,
+.fc-sub {
+    transition: opacity .2s ease;
+}
+
+.auth-float-card.fc-fade-out .fc-title,
+.auth-float-card.fc-fade-out .fc-sub {
+    opacity: 0;
+}
+
+.auth-float-card-3 {
+    /* position this relative to -1 and -2 in your layout */
+    top: 60%;
+    right: 8%;
+}

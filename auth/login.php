@@ -44,11 +44,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors[] = 'Incorrect email or password.';
         } elseif (isset($user['is_active']) && (int) $user['is_active'] === 0) {
             $errors[] = 'This account has been deactivated. Please contact the Registrar\'s Office.';
-        } else {
+       } else {
             session_regenerate_id(true);
             $_SESSION['user_id']    = (int) $user['id'];
             $_SESSION['role']       = $user['role'];
             $_SESSION['first_name'] = $user['first_name'];
+
+            // Remember me: issue a long-lived selector/validator token,
+            // stored in the DB and checked independently of PHP sessions,
+            // so it survives across browser restarts and session GC.
+            if (!empty($_POST['remember'])) {
+                $selector  = bin2hex(random_bytes(9));
+                $validator = bin2hex(random_bytes(33));
+                $expiresAt = date('Y-m-d H:i:s', time() + 60 * 60 * 24 * 30); // 30 days
+
+                $insert = $pdo->prepare(
+                    'INSERT INTO remember_tokens (user_id, selector, validator_hash, expires_at)
+                     VALUES (:user_id, :selector, :validator_hash, :expires_at)'
+                );
+                $insert->execute([
+                    ':user_id'        => (int) $user['id'],
+                    ':selector'       => $selector,
+                    ':validator_hash' => hash('sha256', $validator),
+                    ':expires_at'     => $expiresAt,
+                ]);
+
+                setcookie(
+                    'remember_me',
+                    $selector . ':' . $validator,
+                    [
+                        'expires'  => time() + 60 * 60 * 24 * 30,
+                        'path'     => '/',
+                        'secure'   => !empty($_SERVER['HTTPS']),
+                        'httponly' => true,
+                        'samesite' => 'Lax',
+                    ]
+                );
+            }
+
+            if (!empty($_POST['remember'])) {
+                error_log('REMEMBER ME: checkbox was checked, attempting insert for user ' . $user['id']);
+
+                $selector  = bin2hex(random_bytes(9));
+                $validator = bin2hex(random_bytes(33));
+                $expiresAt = date('Y-m-d H:i:s', time() + 60 * 60 * 24 * 30); // 30 days
+
+                try {
+                    $insert = $pdo->prepare(
+                        'INSERT INTO remember_tokens (user_id, selector, validator_hash, expires_at)
+                         VALUES (:user_id, :selector, :validator_hash, :expires_at)'
+                    );
+                    $insert->execute([
+                        ':user_id'        => (int) $user['id'],
+                        ':selector'       => $selector,
+                        ':validator_hash' => hash('sha256', $validator),
+                        ':expires_at'     => $expiresAt,
+                    ]);
+                    error_log('REMEMBER ME: insert succeeded, selector=' . $selector);
+                } catch (\Throwable $e) {
+                    error_log('REMEMBER ME: insert FAILED: ' . $e->getMessage());
+                }
+
+                setcookie(
+                    'remember_me',
+                    $selector . ':' . $validator,
+                    [
+                        'expires'  => time() + 60 * 60 * 24 * 30,
+                        'path'     => '/',
+                        'secure'   => !empty($_SERVER['HTTPS']),
+                        'httponly' => true,
+                        'samesite' => 'Lax',
+                    ]
+                );
+            } else {
+                error_log('REMEMBER ME: checkbox was NOT checked, $_POST[remember] = ' . var_export($_POST['remember'] ?? null, true));
+            }
 
             log_activity($pdo, (int) $user['id'], $user['role'], 'login');
 

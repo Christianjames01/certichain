@@ -260,6 +260,18 @@ h1.hero-title em {
   background: rgba(255, 255, 255, 0.1);
 }
 
+/* .btn-ghost is styled for the dark hero section (white text/border).
+   Inside the white header bar it needs dark colors, or it's invisible. */
+header.main .btn-ghost {
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+header.main .btn-ghost:hover {
+  background: var(--parchment-dim);
+  color: var(--hcdc-navy);
+}
+
 .hero-quicklinks {
   display: flex;
   gap: 26px;

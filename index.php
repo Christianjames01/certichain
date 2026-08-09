@@ -76,7 +76,7 @@ $spotlightCerts = [
                 <img class="crest" src="public/assets/logo/hcdc-logo.jpg" alt="Holy Cross of Davao College logo">
                 <div class="brand-text">
                     <div class="school">Holy Cross of Davao College</div>
-                    <div class="office">The Office of Registration and Records Management &middot; CertiChain</div>
+                    <div class="office">The Office of Registration and Records Management</div>
                 </div>
             </div>
             <nav class="primary">
@@ -86,7 +86,8 @@ $spotlightCerts = [
                 <a href="index.php#news">Announcements</a>
                 <a href="about.php">About</a>
             </nav>
-            <div class="header-cta">    
+
+            <div class="header-cta">
                 <?php if ($isLoggedIn): ?>
                     <span style="font-size:13.5px;color:var(--hcdc-ink-soft);margin-right:4px;">
                         Hi, <?= htmlspecialchars($firstName) ?>
@@ -96,7 +97,7 @@ $spotlightCerts = [
                     </a>
                     <a href="auth/logout.php" class="btn btn-ghost"><i class="ti ti-logout"></i>Logout</a>
                 <?php else: ?>
-                    <a href="auth/register.php" class="btn btn-ghost"><i class="ti ti-user-plus"></i>Register</a>
+                  
                     <a href="auth/login.php" class="btn btn-primary"><i class="ti ti-login"></i>Login</a>
                 <?php endif; ?>
             </div>

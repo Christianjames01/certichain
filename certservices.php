@@ -56,9 +56,9 @@ $pageTitle = $cert
         <div class="header-row">
             <div class="brand">
                 <img class="crest" src="public/assets/logo/hcdc-logo.jpg" alt="Holy Cross of Davao College logo">
-                <div class="brand-text">
+               <div class="brand-text">
                     <div class="school">Holy Cross of Davao College</div>
-                    <div class="office">The Office of Registration and Records Management &middot; CertiChain</div>
+                    <div class="office">The Office of Registration and Records Management</div>
                 </div>
             </div>
             <nav class="primary">
@@ -78,7 +78,7 @@ $pageTitle = $cert
                     </a>
                     <a href="auth/logout.php" class="btn btn-ghost"><i class="ti ti-logout"></i>Logout</a>
                 <?php else: ?>
-                    <a href="auth/register.php" class="btn btn-ghost"><i class="ti ti-user-plus"></i>Register</a>
+                  
                     <a href="auth/login.php" class="btn btn-primary"><i class="ti ti-login"></i>Login</a>
                 <?php endif; ?>
             </div>

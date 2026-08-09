@@ -10,6 +10,60 @@ session_start([
     'cookie_samesite' => 'Strict',
 ]);
 
+// Needed here (not just in the pages that already require it) so the
+// remember-me check below can query the database before session_start
+// alone would otherwise leave the user logged out.
+require_once __DIR__ . '/../config/db.php'; // $pdo
+
+/**
+ * Remember-me: if there's no active session but a valid remember_me
+ * cookie exists, restore the session from the stored token.
+ */
+if (empty($_SESSION['user_id']) && !empty($_COOKIE['remember_me'])) {
+    error_log('REMEMBER RESTORE: cookie present = ' . $_COOKIE['remember_me']);
+
+    $parts = explode(':', $_COOKIE['remember_me'], 2);
+
+    if (count($parts) === 2) {
+        [$selector, $validator] = $parts;
+        error_log('REMEMBER RESTORE: selector=' . $selector . ' validator_len=' . strlen($validator));
+
+        $stmt = $pdo->prepare(
+            'SELECT rt.user_id, rt.validator_hash, u.first_name, u.role, u.is_active
+             FROM remember_tokens rt
+             JOIN users u ON u.user_id = rt.user_id
+             WHERE rt.selector = :selector AND rt.expires_at > NOW() LIMIT 1'
+        );
+        $stmt->execute([':selector' => $selector]);
+        $row = $stmt->fetch();
+
+        if (!$row) {
+            error_log('REMEMBER RESTORE: no matching row found for selector (bad selector, or expired, or already deleted)');
+        } else {
+            $hashMatch = hash_equals($row['validator_hash'], hash('sha256', $validator));
+            error_log('REMEMBER RESTORE: row found. hashMatch=' . var_export($hashMatch, true) . ' is_active=' . var_export($row['is_active'], true));
+        }
+
+        if ($row && hash_equals($row['validator_hash'], hash('sha256', $validator)) && (int) $row['is_active'] !== 0) {
+            session_regenerate_id(true);
+            $_SESSION['user_id']    = (int) $row['user_id'];
+            $_SESSION['role']       = $row['role'];
+            $_SESSION['first_name'] = $row['first_name'];
+            error_log('REMEMBER RESTORE: session restored for user_id=' . $row['user_id']);
+        } else {
+            // Invalid or expired token — clear the stale cookie.
+            error_log('REMEMBER RESTORE: FAILED validation, clearing cookie');
+            setcookie('remember_me', '', ['expires' => time() - 3600, 'path' => '/']);
+        }
+    } else {
+        error_log('REMEMBER RESTORE: cookie malformed, only ' . count($parts) . ' part(s)');
+    }
+} elseif (!empty($_SESSION['user_id'])) {
+    // already logged in via normal session, nothing to do
+} else {
+    error_log('REMEMBER RESTORE: no session AND no remember_me cookie present at all');
+}
+
 /**
  * Require the current session to belong to one of the given roles.
  * Redirects to login if not authenticated, or shows 403 if wrong role.

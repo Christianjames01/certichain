@@ -339,7 +339,7 @@ $dashboardUrl = $dashboardByRole[$role] ?? 'index.php';
                 <img class="crest" src="public/assets/logo/hcdc-logo.jpg" alt="Holy Cross of Davao College logo">
                 <div class="brand-text">
                     <div class="school">Holy Cross of Davao College</div>
-                    <div class="office">The Office of Registration and Records Management &middot; CertiChain</div>
+                    <div class="office">The Office of Registration and Records Management</div>
                 </div>
             </div>
             <nav class="primary">
@@ -359,7 +359,7 @@ $dashboardUrl = $dashboardByRole[$role] ?? 'index.php';
                     </a>
                     <a href="auth/logout.php" class="btn btn-ghost"><i class="ti ti-logout"></i>Logout</a>
                 <?php else: ?>
-                    <a href="auth/register.php" class="btn btn-ghost"><i class="ti ti-user-plus"></i>Register</a>
+                    
                     <a href="auth/login.php" class="btn btn-primary"><i class="ti ti-login"></i>Login</a>
                 <?php endif; ?>
             </div>
@@ -427,28 +427,28 @@ $dashboardUrl = $dashboardByRole[$role] ?? 'index.php';
                                 <div class="yr">1951</div>
                                 <div class="tl-body">
                                     <h4>Founded by the RVM Sisters</h4>
-                                    <p>The school began as an annex campus opened by the Religious of the Virgin Mary Sisters, laying the foundation of Catholic education in Davao.</p>
+                                    <p>The Religious of the Virgin Mary Sisters founded the school as an annex of the Immaculate Conception College, laying the foundation of Catholic education in Davao.</p>
                                 </div>
                             </li>
                             <li>
-                                <div class="yr">1956&ndash;76</div>
+                                <div class="yr">1956</div>
                                 <div class="tl-body">
-                                    <h4>Led by the PME Fathers</h4>
-                                    <p>The Foreign Mission Society of Quebec (PME Fathers) took over administration, strengthening the school's academic and institutional structures.</p>
+                                    <h4>Turned over to the PME Fathers</h4>
+                                    <p>The Foreign Mission Society of Quebec (PME Fathers) took over administration. The school became an exclusive school for boys under the name Holy Cross Academy of Davao.</p>
                                 </div>
                             </li>
                             <li>
-                                <div class="yr">1976</div>
+                                <div class="yr">1966</div>
+                                <div class="tl-body">
+                                    <h4>Became Holy Cross of Davao College</h4>
+                                    <p>The school began offering college-level courses and was officially renamed Holy Cross of Davao College.</p>
+                                </div>
+                            </li>
+                            <li>
+                                <div class="yr">1978</div>
                                 <div class="tl-body">
                                     <h4>Entrusted to the Archdiocese of Davao</h4>
-                                    <p>Stewardship of the school passed to the Archdiocese of Davao, which continues to guide HCDC today as an archdiocesan educational institution.</p>
-                                </div>
-                            </li>
-                            <li>
-                                <div class="yr">Today</div>
-                                <div class="tl-body">
-                                    <h4>A growing Catholic institution</h4>
-                                    <p>HCDC now serves basic education and college students across three campuses, offering programs from grade school through undergraduate and graduate degrees.</p>
+                                    <p>Ownership was fully transferred to the Archdiocese of Davao, which continues to guide HCDC today as an archdiocesan educational institution.</p>
                                 </div>
                             </li>
                         </ul>
@@ -457,13 +457,13 @@ $dashboardUrl = $dashboardByRole[$role] ?? 'index.php';
                     <div class="about-block">
                         <h2>Schools &amp; Colleges</h2>
                         <ul class="school-list">
-                            <li>School of Humanities, Social Sciences and Communication</li>
-                            <li>School of Teacher Education</li>
-                            <li>School of Business and Management Education</li>
-                            <li>College of Engineering and Technology</li>
-                            <li>College of Maritime Education</li>
-                            <li>College of Criminal Justice Education</li>
-                            <li>Grade School and High School (Basic Education)</li>
+                            <li>School of Humanities, Social Sciences and Communication (HUSOCOM)</li>
+                            <li>School of Business and Management Education (SBME)</li>
+                            <li>School of Teacher Education (STE)</li>
+                            <li>College of Engineering and Technology (CET)</li>
+                            <li>College of Criminal Justice Education (CCJE)</li>
+                            <li>College of Maritime Education (COME)</li>
+                            <li>Graduate School</li>
                         </ul>
                     </div>
                 </div>
@@ -473,11 +473,19 @@ $dashboardUrl = $dashboardByRole[$role] ?? 'index.php';
                         <div class="label">At a Glance</div>
                         <div class="about-sidebar-row">
                             <i class="ti ti-calendar"></i>
-                            <span>Founded in 1951, archdiocesan since 1976</span>
+                            <span>Founded in 1951, archdiocesan since 1978</span>
                         </div>
                         <div class="about-sidebar-row">
                             <i class="ti ti-building-church"></i>
                             <span>Run by the Archdiocese of Davao</span>
+                        </div>
+                        <div class="about-sidebar-row">
+                            <i class="ti ti-quote"></i>
+                            <span>Ex Fide Ad Veritatem &mdash; "From Faith to Truth"</span>
+                        </div>
+                        <div class="about-sidebar-row">
+                            <i class="ti ti-certificate"></i>
+                            <span>PAASCU accredited, CHED recognized, ISO certified, AUN-QA compliant</span>
                         </div>
                         <div class="about-sidebar-row">
                             <i class="ti ti-map-pin"></i>
@@ -498,25 +506,25 @@ $dashboardUrl = $dashboardByRole[$role] ?? 'index.php';
                                 </div>
                                 <div>
                                     <div class="c-name">Main Campus &mdash; Sta. Ana Avenue</div>
-                                    <div class="c-desc">Undergraduate, graduate, and technical-vocational programs, Davao City.</div>
+                                    <div class="c-desc">Undergraduate, graduate, Davao City.</div>
                                 </div>
                             </div>
-                            <div class="campus-card">
+                           <div class="campus-card">
                                 <div class="c-icon">
                                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></svg>
                                 </div>
                                 <div>
-                                    <div class="c-name">J.P. Laurel Avenue Campus</div>
-                                    <div class="c-desc">Basic education &mdash; grade school and high school, Davao City.</div>
+                                    <div class="c-name">J.P. Laurel Campus</div>
+                                    <div class="c-desc">Basic education &mdash;  Maritime Education facilities, Bajada, Davao City.</div>
                                 </div>
                             </div>
-                            <div class="campus-card">
+                           <div class="campus-card">
                                 <div class="c-icon">
                                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20M12 2c2.5 2.5 4 6.5 4 10s-1.5 7.5-4 10c-2.5-2.5-4-6.5-4-10s1.5-7.5 4-10z" /></svg>
                                 </div>
                                 <div>
-                                    <div class="c-name">Samal Campus &mdash; Kaputian</div>
-                                    <div class="c-desc">Undergraduate programs, Island Garden City of Samal, Davao del Norte.</div>
+                                    <div class="c-name">Camudmud Campus &mdash; Babak</div>
+                                    <div class="c-desc">Maritime Education facilities, Island Garden City of Samal.</div>
                                 </div>
                             </div>
                         </div>
