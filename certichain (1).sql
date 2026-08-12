@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 06, 2026 at 05:04 PM
+-- Generation Time: Aug 12, 2026 at 02:37 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -57,7 +57,12 @@ INSERT INTO `activity_logs` (`log_id`, `user_id`, `role`, `action`, `ip_address`
 (15, 2, 'student', 'login', '::1', '2026-08-06 13:34:01'),
 (16, 3, 'employee', 'login', '::1', '2026-08-06 13:42:34'),
 (17, 2, 'student', 'login', '::1', '2026-08-06 13:44:11'),
-(18, 2, 'student', 'Submitted request #3', '::1', '2026-08-06 13:51:00');
+(18, 2, 'student', 'Submitted request #3', '::1', '2026-08-06 13:51:00'),
+(19, 2, 'student', 'login', '::1', '2026-08-09 12:44:39'),
+(20, 2, 'student', 'login', '::1', '2026-08-09 12:47:33'),
+(21, 2, 'student', 'login', '::1', '2026-08-09 12:49:46'),
+(22, 2, 'student', 'login', '::1', '2026-08-09 12:51:22'),
+(23, 2, 'user', 'password_reset_requested', '::1', '2026-08-09 12:53:37');
 
 -- --------------------------------------------------------
 
@@ -335,13 +340,20 @@ CREATE TABLE `official_receipts` (
 --
 
 CREATE TABLE `password_reset_tokens` (
-  `token_id` int(11) NOT NULL,
+  `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
-  `token` char(64) NOT NULL,
+  `selector` varchar(24) NOT NULL,
+  `validator_hash` varchar(255) NOT NULL,
   `expires_at` datetime NOT NULL,
-  `used_at` datetime DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `used` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `password_reset_tokens`
+--
+
+INSERT INTO `password_reset_tokens` (`id`, `user_id`, `selector`, `validator_hash`, `expires_at`, `used`) VALUES
+(1, 2, 'c79d92ca41d5bf6afa', '5c26c226f0c32fad68a7667e7a9cfe7096afbc55bee6597c3deb89e6768c1a57', '2026-08-09 15:53:35', 0);
 
 -- --------------------------------------------------------
 
@@ -419,6 +431,28 @@ INSERT INTO `programs` (`program_id`, `college_id`, `program_name`, `degree_code
 (54, 8, 'Master of Arts in Theology major in Religious Education', 'MA Theo-RE', 'masters', 1),
 (55, 8, 'Master of Arts in Theology major in Theological Studies', 'MA Theo-TS', 'masters', 1),
 (56, 8, 'Master of Science in Economics', 'MS Econ', 'masters', 1);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `remember_tokens`
+--
+
+CREATE TABLE `remember_tokens` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `selector` varchar(24) NOT NULL,
+  `validator_hash` varchar(255) NOT NULL,
+  `expires_at` datetime NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `remember_tokens`
+--
+
+INSERT INTO `remember_tokens` (`id`, `user_id`, `selector`, `validator_hash`, `expires_at`) VALUES
+(2, 2, '7d40beaf9ef27453c1', '9b11dc011c53ca77acbaf4bc97165b50f50a4652d499f46072953a5a81f2f4ba', '2026-09-08 14:49:46'),
+(4, 2, '854d4c76faab8733c5', '46895692fe292a47fd0609bd0dd9a662e3448e5581033564b632a32d1a58d333', '2026-09-08 14:51:22');
 
 -- --------------------------------------------------------
 
@@ -620,9 +654,9 @@ ALTER TABLE `official_receipts`
 -- Indexes for table `password_reset_tokens`
 --
 ALTER TABLE `password_reset_tokens`
-  ADD PRIMARY KEY (`token_id`),
-  ADD UNIQUE KEY `token` (`token`),
-  ADD KEY `idx_prt_user` (`user_id`);
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `selector` (`selector`),
+  ADD KEY `user_id` (`user_id`);
 
 --
 -- Indexes for table `programs`
@@ -631,6 +665,14 @@ ALTER TABLE `programs`
   ADD PRIMARY KEY (`program_id`),
   ADD KEY `idx_programs_college` (`college_id`),
   ADD KEY `idx_programs_degree_code` (`degree_code`);
+
+--
+-- Indexes for table `remember_tokens`
+--
+ALTER TABLE `remember_tokens`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `selector` (`selector`),
+  ADD KEY `user_id` (`user_id`);
 
 --
 -- Indexes for table `requests`
@@ -676,7 +718,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `activity_logs`
 --
 ALTER TABLE `activity_logs`
-  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT for table `alumni`
@@ -742,13 +784,19 @@ ALTER TABLE `official_receipts`
 -- AUTO_INCREMENT for table `password_reset_tokens`
 --
 ALTER TABLE `password_reset_tokens`
-  MODIFY `token_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `programs`
 --
 ALTER TABLE `programs`
   MODIFY `program_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=57;
+
+--
+-- AUTO_INCREMENT for table `remember_tokens`
+--
+ALTER TABLE `remember_tokens`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `requests`
@@ -839,13 +887,19 @@ ALTER TABLE `official_receipts`
 -- Constraints for table `password_reset_tokens`
 --
 ALTER TABLE `password_reset_tokens`
-  ADD CONSTRAINT `fk_prt_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `password_reset_tokens_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `programs`
 --
 ALTER TABLE `programs`
   ADD CONSTRAINT `fk_programs_college` FOREIGN KEY (`college_id`) REFERENCES `colleges` (`college_id`) ON UPDATE CASCADE;
+
+--
+-- Constraints for table `remember_tokens`
+--
+ALTER TABLE `remember_tokens`
+  ADD CONSTRAINT `remember_tokens_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `requests`
