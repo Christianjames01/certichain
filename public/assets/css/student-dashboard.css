@@ -115,90 +115,54 @@
 /* Pipeline widget — the sidebar's signature element.
    Three linked nodes standing in for CertiChain's own name: a
    request's custody chain from filing to release. */
+/* Certificate Request Process */
+
 .chain-status {
     margin-top: auto;
-    padding: 20px 6px 4px;
+    padding: 24px 0;
 }
 
 .chain-status-label {
-    font-family: var(--font-mono);
-    font-size: 10.5px;
-    letter-spacing: .1em;
+    font-size: 11px;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.45);
-    margin-bottom: 14px;
+    letter-spacing: 2px;
+    color: rgba(255, 255, 255, .5);
+    margin-bottom: 20px;
 }
 
-.chain-track {
-    display: flex;
-    align-items: center;
-}
-
-.chain-node {
+.process-list {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    flex: 1;
-    min-width: 0;
+    gap: 12px;
 }
 
-.chain-node .chain-num {
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
+.process-item {
     display: flex;
     align-items: center;
-    justify-content: center;
-    font-family: var(--font-display);
-    font-size: 14px;
-    font-weight: 600;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1.5px solid rgba(255, 255, 255, 0.18);
-    color: rgba(255, 255, 255, 0.55);
+    gap: 12px;
 }
 
-.chain-node .chain-tag {
-    font-size: 10px;
-    letter-spacing: .02em;
-    color: rgba(255, 255, 255, 0.45);
-    white-space: nowrap;
+.process-icon {
+    width: 24px;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--hcdc-gold-light);
 }
 
-.chain-node.lit .chain-num {
-    border-color: transparent;
+.process-text {
+    font-size: 13px;
+    color: rgba(255, 255, 255, .9);
 }
 
-.chain-node.lit-pending .chain-num {
-    background: var(--hcdc-gold-light);
-    color: var(--hcdc-navy);
+.process-legend {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, .1);
+    font-size: 11px;
+    line-height: 1.8;
+    color: rgba(255, 255, 255, .6);
 }
-
-.chain-node.lit-ready .chain-num {
-    background: var(--white);
-    color: var(--hcdc-navy);
-}
-
-.chain-node.lit-released .chain-num {
-    background: #7fd8ab;
-    color: #0c3d24;
-}
-
-.chain-node.lit .chain-tag {
-    color: rgba(255, 255, 255, 0.85);
-}
-
-.chain-link {
-    height: 2px;
-    flex: 0 0 18px;
-    background: rgba(255, 255, 255, 0.18);
-    margin-bottom: 18px;
-}
-
-.chain-link.lit {
-    background: var(--hcdc-gold-light);
-}
-
 /* Sidebar footer actions */
 .sidebar-footer {
     display: flex;
@@ -458,6 +422,7 @@
 /* ---------------------------------------------------------------
    Responsive: sidebar collapses to a horizontal top strip
    --------------------------------------------------------------- */
+
 @media (max-width: 900px) {
     .app-shell {
         flex-direction: column;
@@ -494,13 +459,13 @@
 
     .chain-status {
         margin: 0;
-        padding: 0;
+        padding: 20px 0;
         order: 2;
-        flex: 1 1 220px;
+        width: 100%;
     }
 
     .chain-status-label {
-        display: none;
+        display: block;
     }
 
     .sidebar-footer {
@@ -523,13 +488,13 @@
 
 @media (max-width: 560px) {
 
-    .sidebar-footer .btn span,
-    .sidebar-footer .btn {
-        font-size: 12.5px;
+    .sidebar-footer .btn,
+    .sidebar-footer .btn span {
+        font-size: 12px;
         padding: 8px 12px;
     }
 
     .chain-tag {
-        display: none;
+        display: block;
     }
 }

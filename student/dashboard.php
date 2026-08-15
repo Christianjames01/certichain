@@ -76,10 +76,60 @@ function statusBadgeClass(string $status): string
 }
 
 // Pipeline widget fill state — a node is "lit" once it has ever had volume.
-$pipelineHasPending  = $stats['pending']  > 0;
-$pipelineHasReady    = $stats['ready']    > 0;
+$pipelineHasPending  = $stats['pending'] > 0;
+$pipelineHasReady    = $stats['ready'] > 0;
 $pipelineHasReleased = $stats['released'] > 0;
+
+$currentStep = 1;
+
+if (!empty($allRequests)) {
+
+    $latestStatus = strtolower((string) $allRequests[0]['status']);
+
+    switch ($latestStatus) {
+
+        case 'pending':
+        case 'pending_review':
+            $currentStep = 1;
+            break;
+
+        case 'finance_payment':
+            $currentStep = 2;
+            break;
+
+        case 'receipt_uploaded':
+            $currentStep = 3;
+            break;
+
+        case 'processing':
+        case 'under_review':
+            $currentStep = 4;
+            break;
+
+        case 'approved':
+        case 'ready':
+        case 'ready_for_pickup':
+            $currentStep = 5;
+            break;
+
+        case 'released':
+        case 'completed':
+        case 'claimed':
+            $currentStep = 6;
+            break;
+    }
+}
+
+$steps = [
+    1 => 'Request',
+    2 => 'Finance Payment',
+    3 => 'Show Receipt',
+    4 => 'Processing',
+    5 => 'Approval',
+    6 => 'Claim Physical'
+];
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -126,26 +176,57 @@ $pipelineHasReleased = $stats['released'] > 0;
                 </button>
             </nav>
 
-            <div class="chain-status" aria-label="Your request pipeline">
-                <div class="chain-status-label">Your pipeline</div>
-                <div class="chain-track">
-                    <div class="chain-node <?= $pipelineHasPending ? 'lit lit-pending' : '' ?>">
-                        <span class="chain-num"><?= (int) $stats['pending'] ?></span>
-                        <span class="chain-tag">Pending</span>
-                    </div>
-                    <div class="chain-link <?= $pipelineHasPending ? 'lit' : '' ?>"></div>
-                    <div class="chain-node <?= $pipelineHasReady ? 'lit lit-ready' : '' ?>">
-                        <span class="chain-num"><?= (int) $stats['ready'] ?></span>
-                        <span class="chain-tag">Ready</span>
-                    </div>
-                    <div class="chain-link <?= $pipelineHasReady ? 'lit' : '' ?>"></div>
-                    <div class="chain-node <?= $pipelineHasReleased ? 'lit lit-released' : '' ?>">
-                        <span class="chain-num"><?= (int) $stats['released'] ?></span>
-                        <span class="chain-tag">Released</span>
-                    </div>
-                </div>
+           <div class="chain-status">
+
+    <div class="chain-status-label">
+        Certificate Request Process
+    </div>
+
+    <div class="process-list">
+
+        <?php foreach ($steps as $number => $label): ?>
+
+            <div class="process-item">
+
+                <span class="process-icon">
+
+                    <?php if ($number < $currentStep): ?>
+
+                        ✓
+
+                    <?php elseif ($number == $currentStep): ?>
+
+                        ●
+
+                    <?php else: ?>
+
+                        ○
+
+                    <?php endif; ?>
+
+                </span>
+
+                <span class="process-text">
+
+                    <?= htmlspecialchars($label) ?>
+
+                </span>
+
             </div>
 
+        <?php endforeach; ?>
+
+    </div>
+
+    <div class="process-legend">
+
+        ✓ = Completed<br>
+        ● = Current step<br>
+        ○ = Upcoming step
+
+    </div>
+
+</div>
             <div class="sidebar-footer">
                 <a href="../student/dashboard.php" class="btn btn-gold btn-block">
                     <i class="ti ti-arrow-left"></i>Back to Dashboard

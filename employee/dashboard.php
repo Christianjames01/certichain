@@ -16,275 +16,260 @@ if (($_SESSION['role'] ?? '') !== 'employee') {
 $userId    = (int) $_SESSION['user_id'];
 $firstName = $_SESSION['first_name'] ?? '';
 
-/**
- * ------------------------------------------------------------------
- * Schema notes (best-guess placeholders — adjust to match your DB):
- *
- *   users(user_id, first_name, last_name, role, program_id, ...)
- *     - an employee's assigned program lives on their own user row,
- *       set via registrar_head/assign_employee.php.
- *   programs(program_id, program_name, program_code)
- *   requests(request_id, user_id, document_type_id, cert_type,
- *            status, created_at, ...)
- *     - requests.user_id references the STUDENT who filed it.
- *
- * If any query below throws, check these column names against
- * `DESCRIBE users;`, `DESCRIBE programs;`, `DESCRIBE requests;`
- * in phpMyAdmin and adjust. Everything fails soft to an empty
- * state so this page won't fatal-error either way.
- * ------------------------------------------------------------------
- */
+$dbError = false;
+$noProgram = false;
 
-$programId    = null;
-$programName  = null;
-$programCode  = null;
-$dbError      = false;
-$noProgram    = false;
+$programId = null;
+$programName = null;
+$programCode = null;
 
 $stats = [
-    'total'    => 0,
-    'pending'  => 0,
-    'ready'    => 0,
+    'total' => 0,
+    'pending' => 0,
+    'ready' => 0,
     'released' => 0,
 ];
+
 $recentRequests = [];
-$allRequests    = [];
+$allRequests = [];
 
 try {
-    // 1. Find which program this employee is assigned to.
-    $stmt = $pdo->prepare(
-        'SELECT u.program_id, p.program_name, p.program_code
-         FROM users u
-         LEFT JOIN programs p ON p.program_id = u.program_id
-         WHERE u.user_id = :uid'
-    );
-    $stmt->execute([':uid' => $userId]);
-    $employeeRow = $stmt->fetch();
+    // 1. Get the employee's assigned college and assigned program from the database record
+    $stmt = $pdo->prepare("
+        SELECT assigned_college_id, program_id
+        FROM employees
+        WHERE user_id = :uid
+        LIMIT 1
+    ");
+
+    $stmt->execute([
+        ':uid' => $userId
+    ]);
+    $employeeRow = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$employeeRow || empty($employeeRow['program_id'])) {
         $noProgram = true;
     } else {
-        $programId   = (int) $employeeRow['program_id'];
-        $programName = $employeeRow['program_name'] ?? null;
-        $programCode = $employeeRow['program_code'] ?? null;
+        $collegeId = (int)$employeeRow['assigned_college_id'];
+        $assignedProgramId = (int)$employeeRow['program_id'];
 
-        // 2. Status counts, scoped to students in this program only.
-        $stmt = $pdo->prepare(
-            'SELECT r.status, COUNT(*) AS c
-             FROM requests r
-             JOIN users u ON u.user_id = r.user_id
-             WHERE u.program_id = :pid
-             GROUP BY r.status'
-        );
-        $stmt->execute([':pid' => $programId]);
-        foreach ($stmt->fetchAll() as $row) {
-            $status = strtolower((string) $row['status']);
-            $count  = (int) $row['c'];
+        // Get the specific program details that match the employee's assigned program_id
+        $stmt = $pdo->prepare("
+            SELECT program_id,
+                   program_name,
+                   degree_code
+            FROM programs
+            WHERE program_id = :program_id
+            LIMIT 1
+        ");
+        $stmt->execute([
+            ':program_id' => $assignedProgramId
+        ]);
+
+        $programRow = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($programRow) {
+            $programId = $programRow['program_id'];
+            $programName = $programRow['program_name'];
+            $programCode = $programRow['degree_code'];
+        }
+
+        // Count requests strictly filtered by the specific program_id
+        $stmt = $pdo->prepare("
+            SELECT status,
+                   COUNT(*) AS total
+            FROM requests
+            WHERE program_id = :program_id
+            GROUP BY status
+        ");
+
+        $stmt->execute([
+            ':program_id' => $assignedProgramId
+        ]);
+
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $status = strtolower($row['status']);
+            $count = (int)$row['total'];
+
             $stats['total'] += $count;
-            if (in_array($status, ['pending', 'processing', 'under_review'], true)) {
+
+            if (strpos($status, 'pending') !== false) {
                 $stats['pending'] += $count;
-            } elseif (in_array($status, ['ready', 'ready_for_pickup', 'approved'], true)) {
+            } elseif (
+                strpos($status, 'ready') !== false ||
+                strpos($status, 'approved') !== false
+            ) {
                 $stats['ready'] += $count;
-            } elseif (in_array($status, ['released', 'completed', 'claimed'], true)) {
+            } elseif (
+                strpos($status, 'released') !== false ||
+                strpos($status, 'completed') !== false
+            ) {
                 $stats['released'] += $count;
             }
         }
 
-        // 3. Full request list, scoped to students in this program only.
-        $stmt = $pdo->prepare(
-            "SELECT r.request_id, r.status, r.created_at,
-                    COALESCE(dt.name, r.cert_type) AS cert_name,
-                    u.first_name, u.last_name, u.user_id AS student_id
-             FROM requests r
-             JOIN users u ON u.user_id = r.user_id
-             LEFT JOIN document_types dt ON dt.document_type_id = r.document_type_id
-             WHERE u.program_id = :pid
-             ORDER BY r.created_at DESC"
-        );
-        $stmt->execute([':pid' => $programId]);
-        $allRequests    = $stmt->fetchAll();
-        $recentRequests = array_slice($allRequests, 0, 8); // Overview tab
-    }
-} catch (\PDOException $e) {
-    $dbError = true;
-}
+        // Load all requests strictly filtered by the employee's assigned program_id
+        $stmt = $pdo->prepare("
+            SELECT
+                r.request_id,
+                r.status,
+                r.created_at,
+                dt.document_name AS cert_name,
+                u.first_name,
+                u.last_name,
+                s.student_number
+            FROM requests r
+            JOIN students s
+                ON s.user_id = r.requester_user_id
+            JOIN users u
+                ON u.user_id = s.user_id
+            LEFT JOIN document_types dt
+                ON dt.document_type_id = r.document_type_id
+            WHERE r.program_id = :program_id
+            ORDER BY r.created_at DESC
+        ");
 
-function statusBadgeClass(string $status): string
-{
-    $s = strtolower($status);
-    if (in_array($s, ['pending', 'processing', 'under_review'], true)) return 'badge-pending';
-    if (in_array($s, ['ready', 'ready_for_pickup', 'approved'], true)) return 'badge-ready';
-    if (in_array($s, ['released', 'completed', 'claimed'], true)) return 'badge-released';
-    if (in_array($s, ['rejected', 'declined', 'cancelled'], true)) return 'badge-rejected';
-    return 'badge-pending';
+        $stmt->execute([
+            ':program_id' => $assignedProgramId
+        ]);
+
+        $allRequests = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $recentRequests = array_slice($allRequests, 0, 8);
+    }
+
+} catch (PDOException $e) {
+    $dbError = true;
+    $noProgram = true;
 }
 
 function studentFullName(array $r): string
 {
     $name = trim(($r['first_name'] ?? '') . ' ' . ($r['last_name'] ?? ''));
-    return $name !== '' ? $name : 'Student #' . ($r['student_id'] ?? '');
+    return $name !== '' ? $name : ($r['student_number'] ?? 'Unknown Student');
 }
-
-$pipelineHasPending  = $stats['pending']  > 0;
-$pipelineHasReady    = $stats['ready']    > 0;
-$pipelineHasReleased = $stats['released'] > 0;
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Employee Dashboard | CertiChain &middot; Holy Cross of Davao College</title>
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="icon" type="image/jpeg" href="../public/assets/logo/hcdc-logo.jpg">
-    <link
-        href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.44.0/iconfont/tabler-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.44.0/iconfont/tabler-icons.min.css">
+    
+    <!-- Base styles link -->
     <link rel="stylesheet" href="../public/assets/css/index.css">
-    <link rel="stylesheet" href="../public/assets/css/student-dashboard.css">
-    <link rel="stylesheet" href="../public/assets/css/employee-dashboard.css">
 </head>
+<body style="font-family: 'Inter', sans-serif; background-color: #fbf6ee; color: #1e1e1e; margin: 0; padding: 0; min-height: 100vh; display: flex;">
 
-<body>
-
-    <div class="app-shell">
+    <div style="display: flex; width: 100%; min-height: 100vh;">
 
         <!-- ===================== SIDEBAR ===================== -->
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-brand">
-                <img class="crest" src="../public/assets/logo/hcdc-logo.jpg" alt="Holy Cross of Davao College logo">
-                <div class="brand-text">
-                    <div class="school">Holy Cross of Davao College</div>
-                    <div class="office">CertiChain &middot; Employee Portal</div>
+        <aside style="width: 260px; background-color: #0f2c59; color: #ffffff; display: flex; flex-direction: column; padding: 24px 16px; flex-shrink: 0;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 32px; padding: 0 8px;">
+                <img src="../public/assets/logo/hcdc-logo.jpg" alt="HCDC logo" style="width: 32px; height: 32px; border-radius: 4px;">
+                <div style="display: flex; flex-direction: column;">
+                    <div style="font-size: 11px; font-weight: 500; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.2;">Holy Cross of Davao College</div>
+                    <div style="font-size: 14px; font-weight: 700; letter-spacing: -0.3px; line-height: 1.2;">CertiChain &middot; Staff</div>
                 </div>
             </div>
 
-            <?php if (!$noProgram): ?>
-                <div class="program-badge">
-                    <span class="program-badge-label">Assigned program</span>
-                    <span class="program-badge-name">
-                        <?= htmlspecialchars($programName ?: 'Program #' . $programId) ?>
-                        <?php if ($programCode): ?><span class="program-badge-code"><?= htmlspecialchars($programCode) ?></span><?php endif; ?>
-                    </span>
-                </div>
-            <?php endif; ?>
+            <nav style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1;">
+                <button type="button" class="nav-btn active" onclick="switchPanel('overview')" style="display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.1); border: none; color: #ffffff; padding: 12px 16px; font-size: 14px; font-weight: 500; border-radius: 6px; cursor: pointer; text-align: left; width: 100%; transition: all 0.2s ease;">
+                    <i class="ti ti-smart-home" style="font-size: 18px;"></i>Overview
+                </button>
+                <button type="button" class="nav-btn" onclick="switchPanel('requests')" style="display: flex; align-items: center; gap: 12px; background: none; border: none; color: #ffffff; padding: 12px 16px; font-size: 14px; font-weight: 500; border-radius: 6px; cursor: pointer; text-align: left; width: 100%; opacity: 0.65; transition: all 0.2s ease;">
+                    <i class="ti ti-file-description" style="font-size: 18px;"></i>My Tasks
+                </button>
+                <button type="button" class="nav-btn" onclick="switchPanel('account')" style="display: flex; align-items: center; gap: 12px; background: none; border: none; color: #ffffff; padding: 12px 16px; font-size: 14px; font-weight: 500; border-radius: 6px; cursor: pointer; text-align: left; width: 100%; opacity: 0.65; transition: all 0.2s ease;">
+                    <i class="ti ti-user-circle" style="font-size: 18px;"></i>Account
+                </button>
 
-            <nav class="side-nav" id="dash-nav">
-                <button type="button" class="active" data-tab="overview">
-                    <i class="ti ti-layout-dashboard"></i>Overview
-                </button>
-                <button type="button" data-tab="requests">
-                    <i class="ti ti-file-text"></i>Program Requests
-                    <?php if ($stats['total'] > 0): ?><span class="side-nav-count"><?= (int) $stats['total'] ?></span><?php endif; ?>
-                </button>
-                <button type="button" data-tab="account">
-                    <i class="ti ti-user"></i>Account
-                </button>
+                <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin: 28px 8px 8px 8px; opacity: 0.4;">Assigned Scope</div>
+                <div style="padding: 0 8px; font-size: 12px; opacity: 0.7; line-height: 1.5; font-weight: 500;">
+                    <?= htmlspecialchars($programName ?: 'Workspace') ?>
+                </div>
             </nav>
 
-            <?php if (!$noProgram): ?>
-                <div class="chain-status" aria-label="Program request pipeline">
-                    <div class="chain-status-label">Program pipeline</div>
-                    <div class="chain-track">
-                        <div class="chain-node <?= $pipelineHasPending ? 'lit lit-pending' : '' ?>">
-                            <span class="chain-num"><?= (int) $stats['pending'] ?></span>
-                            <span class="chain-tag">Pending</span>
-                        </div>
-                        <div class="chain-link <?= $pipelineHasPending ? 'lit' : '' ?>"></div>
-                        <div class="chain-node <?= $pipelineHasReady ? 'lit lit-ready' : '' ?>">
-                            <span class="chain-num"><?= (int) $stats['ready'] ?></span>
-                            <span class="chain-tag">Ready</span>
-                        </div>
-                        <div class="chain-link <?= $pipelineHasReady ? 'lit' : '' ?>"></div>
-                        <div class="chain-node <?= $pipelineHasReleased ? 'lit lit-released' : '' ?>">
-                            <span class="chain-num"><?= (int) $stats['released'] ?></span>
-                            <span class="chain-tag">Released</span>
-                        </div>
-                    </div>
-                </div>
-            <?php endif; ?>
-
-            <div class="sidebar-footer">
-                <a href="../auth/logout.php" class="btn btn-ghost-dark btn-block">
+            <div style="margin-top: auto; padding-top: 16px;">
+                <a href="../auth/logout.php" style="display: flex; align-items: center; justify-content: center; gap: 8px; background-color: rgba(255, 255, 255, 0.08); color: #ffffff; border: none; padding: 12px; width: 100%; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer; text-decoration: none; transition: background 0.2s ease;">
                     <i class="ti ti-logout"></i>Logout
                 </a>
             </div>
         </aside>
 
-        <!-- ===================== MAIN COLUMN ===================== -->
-        <div class="main-col">
+        <!-- ===================== MAIN CONTENT CANVAS ===================== -->
+        <div style="flex-grow: 1; display: flex; flex-direction: column; padding: 40px 48px; overflow-y: auto;">
 
-            <header class="topbar">
+            <header style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px;">
                 <div>
-                    <div class="topbar-eyebrow">Welcome back</div>
-                    <h1><?= htmlspecialchars($firstName ?: 'Employee') ?></h1>
+                    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; margin-bottom: 4px;">Welcome back</div>
+                    <h1 style="font-size: 24px; font-weight: 700; letter-spacing: -0.5px; color: #1e1e1e; margin: 0;"><?= htmlspecialchars($firstName ?: 'Employee') ?></h1>
                 </div>
-                <div class="topbar-right">
-                    <span class="role-chip">Employee</span>
+                <div>
+                    <span style="background-color: #ffffff; border: 1px solid #e2e8f0; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Staff Panel</span>
                 </div>
             </header>
 
-            <main class="dash-content">
+            <main style="display: flex; flex-direction: column; gap: 28px; width: 100%; max-width: 1000px;">
 
                 <?php if ($noProgram): ?>
-                    <div class="dash-card">
-                        <div class="empty-state">
-                            <i class="ti ti-building-warehouse"></i>
-                            You haven't been assigned to a program yet.<br>
-                            Ask the Registrar Head to assign you to a program before you can view student requests.
+                    <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px 32px;">
+                        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 0; text-align: center; color: #64748b; font-size: 14px; gap: 12px;">
+                            <i class="ti ti-shield-alert" style="font-size: 32px; opacity: 0.5;"></i>
+                            Account program tracking parameters missing. Please consult the Registrar Head.
                         </div>
                     </div>
                 <?php else: ?>
 
-                    <!-- ---------- OVERVIEW TAB ---------- -->
-                    <section class="dash-tab active" data-tab-panel="overview">
-                        <div class="dash-card">
-                            <div class="dash-card-head">
-                                <h2>Recent requests &middot; <?= htmlspecialchars($programName ?: 'your program') ?></h2>
-                                <button type="button" class="section-link link-btn" data-goto-tab="requests">View all</button>
+                    <!-- ---------- OVERVIEW WORKSPACE PANEL ---------- -->
+                    <section class="dash-panel" id="panel-overview">
+                        <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px 32px; margin-bottom: 28px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <h2 style="font-size: 15px; font-weight: 700; color: #1e1e1e; margin: 0;">Recent requests</h2>
+                                <button type="button" onclick="switchPanel('requests')" style="font-size: 13px; font-weight: 600; color: #0f2c59; background: none; border: none; cursor: pointer; text-decoration: none;">View all</button>
                             </div>
 
                             <?php if ($dbError): ?>
-                                <div class="empty-state">
-                                    <i class="ti ti-alert-triangle"></i>
-                                    Couldn't load requests right now. Please try again later.
+                                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 0; text-align: center; color: #64748b; font-size: 14px; gap: 12px;">
+                                    <i class="ti ti-alert-triangle" style="font-size: 32px; opacity: 0.5;"></i>
+                                    Failed to establish secure processing connection pipeline context.
                                 </div>
                             <?php elseif (!$recentRequests): ?>
-                                <div class="empty-state">
-                                    <i class="ti ti-file-off"></i>
+                                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 0; text-align: center; color: #64748b; font-size: 14px; gap: 12px;">
+                                    <i class="ti ti-checkbox" style="font-size: 32px; opacity: 0.5;"></i>
                                     No certificate requests have been filed by students in this program yet.
                                 </div>
                             <?php else: ?>
-                                <table class="req-table">
+                                <table style="width: 100%; border-collapse: collapse; text-align: left;">
                                     <thead>
                                         <tr>
-                                            <th>Student</th>
-                                            <th>Certificate</th>
-                                            <th>Date requested</th>
-                                            <th>Status</th>
-                                            <th></th>
+                                            <th style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9;">Certificate</th>
+                                            <th style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9;">Program</th>
+                                            <th style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9;">Date Requested</th>
+                                            <th style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9;">Status</th>
+                                            <th style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9;"></th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <?php foreach ($recentRequests as $r): ?>
                                             <tr>
-                                                <td class="cert-name"><?= htmlspecialchars(studentFullName($r)) ?></td>
-                                                <td><?= htmlspecialchars($r['cert_name'] ?? 'Certificate') ?></td>
-                                                <td class="req-date">
-                                                    <?= htmlspecialchars(date('M j, Y', strtotime((string) $r['created_at']))) ?>
-                                                </td>
-                                                <td>
-                                                    <span class="badge <?= statusBadgeClass((string) $r['status']) ?>">
-                                                        <?= htmlspecialchars(str_replace('_', ' ', (string) $r['status'])) ?>
+                                                <td style="padding: 16px 0; font-size: 13px; color: #1e1e1e; border-bottom: 1px solid #f8fafc; font-weight: 500;"><?= htmlspecialchars($r['cert_name'] ?? 'Certificate') ?></td>
+                                                <td style="padding: 16px 0; font-size: 13px; color: #475569; border-bottom: 1px solid #f8fafc;"><?= htmlspecialchars($programName) ?></td>
+                                                <td style="padding: 16px 0; font-size: 13px; color: #64748b; border-bottom: 1px solid #f8fafc;"><?= htmlspecialchars(date('M j, Y', strtotime((string)$r['created_at']))) ?></td>
+                                                <td style="padding: 16px 0; font-size: 13px; border-bottom: 1px solid #f8fafc;">
+                                                    <span style="display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; background-color: #fef3c7; color: #d97706; text-transform: capitalize;">
+                                                        <?= htmlspecialchars(str_replace('_', ' ', (string)$r['status'])) ?>
                                                     </span>
                                                 </td>
-                                                <td>
-                                                    <a href="view_request.php?id=<?= (int) $r['request_id'] ?>" class="link-muted"
-                                                        style="font-size:12.5px;">Review &rarr;</a>
+                                                <td style="padding: 16px 0; font-size: 13px; border-bottom: 1px solid #f8fafc; text-align: right;">
+                                                    <a href="view_request.php?id=<?= (int)$r['request_id'] ?>" style="color: #1e1e1e; text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 4px;">
+                                                        View <i class="ti ti-arrow-narrow-right"></i>
+                                                    </a>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
@@ -293,115 +278,87 @@ $pipelineHasReleased = $stats['released'] > 0;
                             <?php endif; ?>
                         </div>
 
-                        <div class="dash-card">
-                            <div class="dash-card-head">
-                                <h2>Quick actions</h2>
-                            </div>
-                            <div class="quick-actions">
-                                <a href="requests.php" class="quick-action">
-                                    <i class="ti ti-list-details"></i>Go to the full requests queue
-                                </a>
-                                <button type="button" class="quick-action" data-goto-tab="requests" style="cursor:pointer;">
-                                    <i class="ti ti-search"></i>Search requests in this program
+                        <!-- Quick Actions Grid layout -->
+                        <div>
+                            <h2 style="font-size: 11px; font-weight: 700; margin-bottom: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Quick actions</h2>
+                            <div style="display: flex; flex-direction: column; gap: 12px;">
+                                <button type="button" onclick="switchPanel('requests')" style="display: flex; align-items: center; gap: 12px; width: 100%; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 16px 20px; font-size: 13px; font-weight: 500; color: #1e1e1e; text-decoration: none; cursor: pointer; text-align: left; font-family: inherit;">
+                                    <i class="ti ti-list-search" style="font-size: 16px; color: #64748b;"></i> Open full validation queue registry
+                                </button>
+                                <button type="button" onclick="switchPanel('account')" style="display: flex; align-items: center; gap: 12px; width: 100%; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 16px 20px; font-size: 13px; font-weight: 500; color: #1e1e1e; text-decoration: none; cursor: pointer; text-align: left; font-family: inherit;">
+                                    <i class="ti ti-id-badge" style="font-size: 16px; color: #64748b;"></i> Review tracking permission assignments
                                 </button>
                             </div>
                         </div>
                     </section>
 
-                    <!-- ---------- PROGRAM REQUESTS TAB ---------- -->
-                    <section class="dash-tab" data-tab-panel="requests">
-                        <div class="dash-card">
-                            <div class="dash-card-head">
-                                <h2>All requests &middot; <?= htmlspecialchars($programName ?: 'your program') ?></h2>
-                                <span class="req-count-pill"><?= (int) $stats['total'] ?> total</span>
+                    <!-- ---------- ALL REQUESTS PANELS ---------- -->
+                    <section class="dash-panel" id="panel-requests" style="display: none;">
+                        <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px 32px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <h2 style="font-size: 15px; font-weight: 700; color: #1e1e1e; margin: 0;">All program requests registry</h2>
+                                <span style="background-color: #ffffff; border: 1px solid #e2e8f0; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; color: #64748b;"><?= (int)$stats['total'] ?> total</span>
                             </div>
 
-                            <?php if (!$dbError && $allRequests): ?>
-                                <div class="req-search">
-                                    <i class="ti ti-search"></i>
-                                    <input type="text" id="req-search-input" placeholder="Search by student name, certificate, or status&hellip;" autocomplete="off">
-                                </div>
-                            <?php endif; ?>
-
-                            <?php if ($dbError): ?>
-                                <div class="empty-state">
-                                    <i class="ti ti-alert-triangle"></i>
-                                    Couldn't load requests right now. Please try again later.
-                                </div>
-                            <?php elseif (!$allRequests): ?>
-                                <div class="empty-state">
-                                    <i class="ti ti-file-off"></i>
-                                    No certificate requests have been filed by students in this program yet.
+                            <?php if (!$allRequests): ?>
+                                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 0; text-align: center; color: #64748b; font-size: 14px; gap: 12px;">
+                                    <i class="ti ti-folder-off" style="font-size: 32px; opacity: 0.5;"></i>
+                                    No records present inside this program database lookup frame.
                                 </div>
                             <?php else: ?>
-                                <div class="full-req-table-wrap">
-                                    <table class="req-table" id="req-table">
-                                        <thead>
+                                <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                                    <thead>
+                                        <tr>
+                                            <th style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9;">Certificate</th>
+                                            <th style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9;">Student</th>
+                                            <th style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9;">Date Filed</th>
+                                            <th style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9;">Status</th>
+                                            <th style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($allRequests as $r): ?>
                                             <tr>
-                                                <th>Student</th>
-                                                <th>Certificate</th>
-                                                <th>Date requested</th>
-                                                <th>Status</th>
-                                                <th></th>
+                                                <td style="padding: 16px 0; font-size: 13px; color: #1e1e1e; border-bottom: 1px solid #f8fafc; font-weight: 500;"><?= htmlspecialchars($r['cert_name'] ?? 'Certificate') ?></td>
+                                                <td style="padding: 16px 0; font-size: 13px; color: #1e1e1e; border-bottom: 1px solid #f8fafc;"><?= htmlspecialchars(studentFullName($r)) ?></td>
+                                                <td style="padding: 16px 0; font-size: 13px; color: #64748b; border-bottom: 1px solid #f8fafc;"><?= htmlspecialchars(date('M j, Y', strtotime((string)$r['created_at']))) ?></td>
+                                                <td style="padding: 16px 0; font-size: 13px; border-bottom: 1px solid #f8fafc;">
+                                                    <span style="display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; background-color: #fef3c7; color: #d97706; text-transform: capitalize;">
+                                                        <?= htmlspecialchars(str_replace('_', ' ', (string)$r['status'])) ?>
+                                                    </span>
+                                                </td>
+                                                <td style="padding: 16px 0; font-size: 13px; border-bottom: 1px solid #f8fafc; text-align: right;">
+                                                    <a href="view_request.php?id=<?= (int)$r['request_id'] ?>" style="color: #1e1e1e; text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 4px;">
+                                                        View <i class="ti ti-arrow-narrow-right"></i>
+                                                    </a>
+                                                </td>
                                             </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php foreach ($allRequests as $r): ?>
-                                                <?php
-                                                    $studentName = studentFullName($r);
-                                                    $certName    = $r['cert_name'] ?? 'Certificate';
-                                                    $statusText  = str_replace('_', ' ', (string) $r['status']);
-                                                    $searchBlob  = strtolower($studentName . ' ' . $certName . ' ' . $statusText);
-                                                ?>
-                                                <tr data-search="<?= htmlspecialchars($searchBlob) ?>">
-                                                    <td class="cert-name"><?= htmlspecialchars($studentName) ?></td>
-                                                    <td><?= htmlspecialchars($certName) ?></td>
-                                                    <td class="req-date">
-                                                        <?= htmlspecialchars(date('M j, Y', strtotime((string) $r['created_at']))) ?>
-                                                    </td>
-                                                    <td>
-                                                        <span class="badge <?= statusBadgeClass((string) $r['status']) ?>">
-                                                            <?= htmlspecialchars($statusText) ?>
-                                                        </span>
-                                                    </td>
-                                                    <td>
-                                                        <a href="view_request.php?id=<?= (int) $r['request_id'] ?>" class="link-muted"
-                                                            style="font-size:12.5px;">Review &rarr;</a>
-                                                    </td>
-                                                </tr>
-                                            <?php endforeach; ?>
-                                        </tbody>
-                                    </table>
-                                    <div class="empty-state" id="req-no-match" style="display:none;">
-                                        <i class="ti ti-search-off"></i>
-                                        No requests match your search.
-                                    </div>
-                                </div>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
                             <?php endif; ?>
                         </div>
                     </section>
 
-                    <!-- ---------- ACCOUNT TAB ---------- -->
-                    <section class="dash-tab" data-tab-panel="account">
-                        <div class="dash-card">
-                            <div class="dash-card-head">
-                                <h2>Account</h2>
+                    <!-- ---------- ACCOUNT MANAGEMENT PANEL ---------- -->
+                    <section class="dash-panel" id="panel-account" style="display: none;">
+                        <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px 32px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <h2 style="font-size: 15px; font-weight: 700; color: #1e1e1e; margin: 0;">Account Privileges Configuration</h2>
                             </div>
-                            <div class="account-row">
-                                <span class="k">Name</span>
-                                <span class="v"><?= htmlspecialchars($firstName) ?></span>
-                            </div>
-                            <div class="account-row">
-                                <span class="k">Role</span>
-                                <span class="v">Employee</span>
-                            </div>
-                            <div class="account-row">
-                                <span class="k">Assigned program</span>
-                                <span class="v"><?= htmlspecialchars($programName ?: 'Program #' . $programId) ?></span>
-                            </div>
-                            <div class="account-row">
-                                <span class="k">Requests in program</span>
-                                <span class="v"><?= (int) $stats['total'] ?></span>
+                            <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 8px;">
+                                <div style="display: flex; justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9;">
+                                    <span style="color: #64748b; font-size: 14px;">Staff Officer Name</span>
+                                    <span style="font-weight: 600; font-size: 14px; color: #1e1e1e;"><?= htmlspecialchars($firstName) ?></span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9;">
+                                    <span style="color: #64748b; font-size: 14px;">System Access Authority</span>
+                                    <span style="font-weight: 600; font-size: 14px; text-transform: uppercase; color: #0f2c59;">Employee Officer</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9;">
+                                    <span style="color: #64748b; font-size: 14px;">Assigned Track Program</span>
+                                    <span style="font-weight: 600; font-size: 14px; color: #1e1e1e;"><?= htmlspecialchars($programName) ?> (<?= htmlspecialchars($programCode) ?>)</span>
+                                </div>
                             </div>
                         </div>
                     </section>
@@ -412,45 +369,34 @@ $pipelineHasReleased = $stats['released'] > 0;
         </div>
     </div>
 
+    <!-- Client side tab toggle routing -->
     <script>
-        (function () {
-            const navButtons = document.querySelectorAll('#dash-nav button[data-tab]');
-            const panels = document.querySelectorAll('.dash-tab[data-tab-panel]');
-
-            function activate(tabName) {
-                navButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tabName));
-                panels.forEach(p => p.classList.toggle('active', p.dataset.tabPanel === tabName));
-            }
-
-            navButtons.forEach(btn => {
-                btn.addEventListener('click', () => activate(btn.dataset.tab));
+        function switchPanel(panelName) {
+            // Manage dashboard nav highlight toggling
+            const buttons = document.querySelectorAll('.nav-btn');
+            buttons.forEach(btn => {
+                btn.style.background = 'none';
+                btn.style.opacity = '0.65';
+                btn.classList.remove('active');
             });
 
-            document.querySelectorAll('[data-goto-tab]').forEach(el => {
-                el.addEventListener('click', () => activate(el.dataset.gotoTab));
-            });
-
-            // Client-side search across the program's full request table.
-            const searchInput = document.getElementById('req-search-input');
-            if (searchInput) {
-                const table = document.getElementById('req-table');
-                const noMatch = document.getElementById('req-no-match');
-                searchInput.addEventListener('input', () => {
-                    const q = searchInput.value.trim().toLowerCase();
-                    let visibleCount = 0;
-                    table.querySelectorAll('tbody tr').forEach(row => {
-                        const hay = row.getAttribute('data-search') || '';
-                        const show = q === '' || hay.includes(q);
-                        row.style.display = show ? '' : 'none';
-                        if (show) visibleCount++;
-                    });
-                    noMatch.style.display = visibleCount === 0 ? '' : 'none';
-                    table.style.display = visibleCount === 0 ? 'none' : '';
-                });
+            // Find matching trigger source
+            const activeTrigger = Array.from(buttons).find(btn => btn.getAttribute('onclick').includes(panelName));
+            if (activeTrigger) {
+                activeTrigger.style.background = 'rgba(255, 255, 255, 0.1)';
+                activeTrigger.style.opacity = '1';
+                activeTrigger.classList.add('active');
             }
-        })();
+
+            // Handle dashboard wrapper panels toggles
+            const panels = document.querySelectorAll('.dash-panel');
+            panels.forEach(p => p.style.display = 'none');
+            
+            const activePanel = document.getElementById('panel-' + panelName);
+            if (activePanel) {
+                activePanel.style.display = 'block';
+            }
+        }
     </script>
-
 </body>
-
 </html>
